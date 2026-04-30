@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>沙雕库 · 全网沙雕动画聚合</title>
+<link rel="stylesheet" href="/common.css">
+</head>
+<body>
+
+<!-- 右侧竖排歌词 -->
+<div class="lyric-side" id="lyricSide">
+  <div class="lyric-fog-top"></div>
+  <div class="lyric-fog-bottom"></div>
+  <div class="lyric-wrap">
+    <div class="lyric-col" id="lyricCol"></div>
+  </div>
+</div>
+
+<audio id="audioEl" preload="auto"></audio>
+
+<header class="header">
+  <div class="logo" id="logoBtn" onclick="goLogo()" style="cursor:pointer">沙雕<span>库</span></div>
+  <div class="search-wrap">
+    <span class="si">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜索作品名、作者名..." autocomplete="off">
+    <button class="search-btn" onclick="doSearch()">搜索</button>
+  </div>
+  <div class="header-right">
+    <div id="guestBtns" style="display:flex;gap:8px">
+      <button class="btn-login" onclick="openModal('loginModal')">登录</button>
+      <button class="btn-reg" onclick="openModal('registerModal')">注册</button>
+    </div>
+    <div class="user-menu" id="userMenu" style="display:none">
+      <!-- 播放器嵌入header -->
+    <div class="player-bar show" id="playerBar">
+      <div class="player-cover" id="playerCover" onclick="togglePlaylist()" title="播放列表"><div class="ph">🎵</div></div>
+      <div class="player-track" id="playerTrack" style="min-width:0;max-width:150px;cursor:pointer;flex-shrink:1" onclick="togglePlaylist()">
+        <div id="playerTitle" style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">未播放</div>
+        <div id="playerArtist" style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      </div>
+      <div class="player-controls">
+        <button class="pctrl" id="btnMode" onclick="toggleMode()" title="播放模式: 顺序播放">🔁</button>
+        <button class="pctrl" onclick="playPrev()" title="上一首">⏮</button>
+        <button class="pctrl play" id="btnPlay" onclick="togglePlay()">▶</button>
+        <button class="pctrl" onclick="playNext()" title="下一首">⏭</button>
+        <div class="player-progress-wrap">
+          <span class="player-time" id="playerTimeCur">0:00</span>
+          <div class="player-progress" id="playerProgress" onmousedown="startSeekDrag(event)">
+            <div class="player-progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+          <span class="player-time" id="playerTimeDur">0:00</span>
+        </div>
+        <div class="player-vol-wrap">
+          <button class="player-vol-icon" id="btnVol" onclick="toggleMute()" title="音量">🔊</button>
+          <div class="player-vol" id="playerVol">
+            <div class="player-vol-fill" id="volFill" style="width:80%"></div>
+          </div>
+        </div>
+        <button class="player-list-btn" onclick="togglePlaylist()">☰ 列表</button>
+      </div>
+    </div>
+    <div class="inbox-btn" onclick="openInbox()" title="我的消息">
+        📬<div class="inbox-badge" id="inboxBadge"></div>
+      </div>
+      <div class="avatar-btn" id="userAvatar" onclick="toggleDD()"></div>
+      <div class="dropdown" id="userDD">
+        <a onclick="openProfile()">👤 个人资料</a>
+        <a onclick="openInbox()">📬 我的消息</a>
+        <a onclick="openSuggest()">💡 提交建议</a>
+        <button onclick="logout()">退出登录</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 公告条 -->
+<div class="announce-bar" id="announceBar" style="display:none">
+  <span class="announce-icon">📢</span>
+  <div class="announce-track">
+    <a class="announce-item" id="announceContent" href="#" target="_blank"></a>
+  </div>
+</div>
+
+<!-- 播放列表 -->
+<div class="playlist-panel" id="playlistPanel"><div class="pl-hd">🎵 播放列表</div></div>
+
+<div class="cat-bar" id="catBar">
+  <div class="cat-item active" onclick="filterCat('all',this)">全部</div>
+</div>
+
+<main class="main">
+  <div class="section-title" id="sectionTitle">🔥 热度排行</div>
+  <div class="card-grid" id="cardGrid"><div class="loading">加载中...</div></div>
+</main>
+
+<!-- LOGIN -->
+<div class="modal-ov" id="loginModal">
+  <div class="modal">
+    <div class="modal-hd"><h2>登录</h2><button class="modal-close" onclick="closeModal('loginModal')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>用户名</label><input id="lUser" placeholder="输入用户名"></div>
+      <div class="fg"><label>密码</label><input type="password" id="lPass" placeholder="输入密码"><div class="ferr" id="lErr"></div></div>
+      <button class="btn-primary" onclick="doLogin()">登录</button>
+      <div class="form-switch">没有账号？<a onclick="switchModal('loginModal','registerModal')">去注册</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div class="modal-ov" id="registerModal">
+  <div class="modal">
+    <div class="modal-hd"><h2>注册</h2><button class="modal-close" onclick="closeModal('registerModal')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>用户名</label><input id="rUser" placeholder="3-16位"></div>
+      <div class="fg"><label>密码</label><input type="password" id="rPass" placeholder="至少6位"></div>
+      <div class="fg"><label>确认密码</label><input type="password" id="rPass2" placeholder="再输一次"><div class="ferr" id="rErr"></div></div>
+      <button class="btn-primary" onclick="doRegister()">注册</button>
+      <div class="form-switch">已有账号？<a onclick="switchModal('registerModal','loginModal')">去登录</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="modal-ov" id="profileModal">
+  <div class="modal">
+    <div class="modal-hd"><h2>👤 个人资料</h2><button class="modal-close" onclick="closeModal('profileModal')">✕</button></div>
+    <div class="modal-bd">
+      <div class="profile-avatar">
+        <div class="profile-avatar-img" id="profileAvImg" onclick="document.getElementById('avatarFileInput').click()" title="点击上传头像"></div>
+        <p>点击头像上传（需GM审核）</p>
+        <p id="avatarStatusText" style="margin-top:4px;font-size:12px"></p>
+      </div>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+      <div class="fg"><label>昵称</label><input id="profileNickname" placeholder="设置昵称（最多20字）"><div class="ferr" id="profileErr"></div></div>
+      <button class="btn-primary" onclick="saveProfile()">保存</button>
+      <div class="fok" id="profileOk"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SUGGEST -->
+<div class="modal-ov" id="suggestModal">
+  <div class="modal">
+    <div class="modal-hd"><h2>💡 提交建议</h2><button class="modal-close" onclick="closeModal('suggestModal')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>建议类型</label><input id="sType" placeholder="新增作品 / 信息有误 / 功能建议..."></div>
+      <div class="fg"><label>详细说明</label><textarea id="sContent" placeholder="请详细描述..."></textarea><div class="ferr" id="sErr"></div></div>
+      <button class="btn-primary" onclick="doSuggest()">提交</button>
+      <div class="fok" id="sOk"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INBOX -->
+<div class="inbox-mask" id="inboxMask" onclick="closeInbox()"></div>
+<div class="inbox-panel" id="inboxPanel">
+  <div class="inbox-hd">
+    <h3>📬 我的消息</h3>
+    <button class="btn-read-all" onclick="readAll()">全部已读</button>
+    <button class="inbox-close" onclick="closeInbox()">✕</button>
+  </div>
+  <div class="inbox-list" id="inboxList"><div class="inbox-empty">加载中...</div></div>
+</div>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-hd">
+    <button class="chat-back" onclick="closeChat()">‹</button>
+    <div class="chat-title"><h4 id="chatTitle">-</h4><p id="chatSub">-</p></div>
+    <button class="chat-close" onclick="closeInbox()">✕</button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-input-area">
+    <div class="chat-img-preview" id="imgPreview">
+      <img id="imgPreviewImg" src="">
+      <button class="chat-img-remove" onclick="removeImg()">✕</button>
+    </div>
+    <div class="chat-input-row">
+      <button class="chat-icon-btn" onclick="document.getElementById('imgFileInput').click()" title="发图片">🖼</button>
+      <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImgSelect(this)">
+      <textarea id="chatInput" placeholder="Enter发送，Shift+Enter换行" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}"></textarea>
+      <button class="chat-send-btn" onclick="sendChatMsg()" id="chatSendBtn">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PAGE -->
+<div class="detail-ov" id="detailPage">
+  <div class="detail-inner" id="detailContent"></div>
+</div>
+
+<!-- EPISODE DETAIL PAGE -->
+<div class="detail-ov" id="episodePage" style="z-index:500">
+  <div class="detail-inner" id="episodeContent"></div>
+</div>
+
+<!-- AUTHOR PAGE -->
+<div class="author-ov" id="authorPage">
+  <div class="author-inner" id="authorContent"></div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lightboxImg" src="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+</body>
+</html>

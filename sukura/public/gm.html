@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GM后台 · 沙雕库</title>
+<style>
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--bg4:#222233;
+  --accent:#fb7299;--accent2:#23ade5;--accent3:#f4a728;--green:#4caf50;
+  --text:#e8e8f0;--text2:#9999bb;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --r:12px;--font:'PingFang SC','Microsoft YaHei','Hiragino Sans GB',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+button,input,select,textarea{font-family:var(--font)}
+::-webkit-scrollbar{width:6px;height:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.lbox{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px;width:360px}
+.lbox h1{font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.lbox p{font-size:13px;color:var(--text2);margin-bottom:24px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);outline:none;font-size:14px;transition:.2s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+.fg textarea{resize:vertical;min-height:60px}
+.fg select option{background:var(--bg3)}
+.btn-lg{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.btn-lg:hover{background:#e55a85}
+.lerr{color:#f44;font-size:12px;margin-top:8px;text-align:center}
+
+#gmApp{display:none}
+.gm-hd{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;gap:10px}
+.gm-logo{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap}
+.gm-nav{display:flex;gap:2px;margin-left:16px;overflow-x:auto}
+.nb{padding:6px 12px;border-radius:6px;font-size:13px;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:.15s;white-space:nowrap}
+.nb:hover{background:var(--bg4);color:var(--text)}
+.nb.active{background:var(--bg3);color:var(--accent)}
+.ubdot{display:inline-block;background:var(--accent);color:#fff;font-size:10px;border-radius:10px;padding:0 5px;margin-left:4px;vertical-align:middle}
+.gm-out{margin-left:auto;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;white-space:nowrap}
+.gm-out:hover{border-color:var(--accent);color:var(--accent)}
+
+.body{max-width:1300px;margin:0 auto;padding:20px}
+.panel{display:none}.panel.active{display:block}
+.g-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.g-card h3{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.sc{background:var(--bg3);border-radius:var(--r);padding:14px;text-align:center}
+.sn{font-size:26px;font-weight:700;color:var(--accent)}
+.sl{font-size:12px;color:var(--text2);margin-top:3px}
+
+/* MESSAGES - chat layout */
+.msg-layout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 110px);min-height:500px}
+.topic-list{border-right:1px solid var(--border);overflow-y:auto;padding:6px}
+.topic-item{background:var(--bg3);border-radius:10px;padding:11px;margin-bottom:5px;cursor:pointer;border:1px solid var(--border);transition:.15s}
+.topic-item:hover{border-color:var(--border2)}
+.topic-item.active{border-color:var(--accent2)}
+.topic-item.has-unread{border-left:3px solid var(--accent)}
+.ti-top{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}
+.ti-from{font-size:12px;font-weight:500}
+.ti-tag{font-size:10px;background:var(--bg4);color:var(--text2);padding:1px 6px;border-radius:4px}
+.ti-time{font-size:10px;color:var(--text2);margin-left:auto}
+.ti-badge{background:#e53935;color:#fff;font-size:10px;border-radius:8px;padding:0 4px;min-width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center}
+.ti-preview{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti-preview.bold{color:var(--text);font-weight:500}
+.chat-area{display:flex;flex-direction:column;overflow:hidden}
+.chat-area-hd{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);flex-shrink:0}
+.chat-msgs-gm{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.bubble-wrap{display:flex;gap:10px;align-items:flex-start;margin-bottom:2px}
+.bubble-wrap.me{flex-direction:row-reverse;gap:6px}
+.bav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;margin-top:2px}
+.bav img{width:100%;height:100%;object-fit:cover}
+.bav.gm-av{background:var(--accent)}.bav.user-av{background:var(--accent2)}
+.bubble-wrap.me .bav{display:none}
+.bubble-body{max-width:68%;display:flex;flex-direction:column}
+.bubble-name{font-size:11px;color:var(--text2);margin-bottom:4px;padding-left:2px}
+.bubble-wrap.me .bubble-name{display:none}
+.bubble{padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.65;word-break:break-word;display:inline-block;max-width:100%}
+.bubble.gm-b{background:#1aad19;color:#fff;border-top-right-radius:4px;align-self:flex-end}
+.bubble.user-b{background:var(--bg3);color:var(--text);border-top-left-radius:4px}
+.bubble img{max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:4px;cursor:pointer}
+.bubble-time{font-size:10px;color:var(--text2);margin-top:4px;padding-left:2px}
+.bubble-wrap.me .bubble-time{text-align:right;padding-right:2px;padding-left:0}
+.chat-input-gm{border-top:1px solid var(--border);padding:10px 12px;flex-shrink:0}
+.img-prev-gm{margin-bottom:8px;position:relative;display:none}
+.img-prev-gm img{max-height:70px;border-radius:6px}
+.img-prev-gm button{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:#e53935;color:#fff;border:none;font-size:10px;cursor:pointer}
+.chat-row-gm{display:flex;gap:8px;align-items:flex-end}
+.chat-row-gm textarea{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-size:13px;resize:none;outline:none;min-height:36px;max-height:100px}
+.chat-row-gm textarea:focus{border-color:var(--accent)}
+.cibtn{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cibtn:hover{background:var(--bg4);color:var(--text)}
+.csbtn{width:32px;height:32px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.csbtn:hover{background:#e55a85}
+.csbtn:disabled{background:var(--bg4);color:var(--text2)}
+.no-topic{display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px;flex:1}
+
+/* VIDEO LIST */
+.vi{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.vi-em{font-size:24px;width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:8px;overflow:hidden}
+.vi-em img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+.vi-info{flex:1;min-width:0}
+.vi-title{font-size:14px;font-weight:500;margin-bottom:3px}
+.vi-meta{font-size:12px;color:var(--text2)}
+.vi-acts{display:flex;gap:5px;flex-shrink:0}
+.bsm{padding:4px 10px;border-radius:6px;font-size:12px;border:none;cursor:pointer;transition:.15s}
+.bsm.edit{background:var(--bg4);color:var(--text2)}.bsm.edit:hover{background:var(--accent2);color:#fff}
+.bsm.del{background:var(--bg4);color:var(--text2)}.bsm.del:hover{background:#c62828;color:#fff}
+
+/* FORM */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid .full{grid-column:1/-1}
+.fg2{margin-bottom:0}
+.fg2 label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px}
+.fg2 input,.fg2 select,.fg2 textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;transition:.2s}
+.fg2 input:focus,.fg2 select:focus,.fg2 textarea:focus{border-color:var(--accent)}
+.fg2 select option{background:var(--bg3)}
+.fg2 textarea{resize:vertical;min-height:55px}
+/* 动态列表 */
+.dyn-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.dyn-row{display:flex;gap:6px;align-items:center}
+.dyn-row input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 9px;color:var(--text);font-size:12px;outline:none}
+.dyn-row input:focus{border-color:var(--accent)}
+.dyn-row-block{background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid var(--border2)}
+.dyn-row-block .dyn-row{background:none;padding:0}
+.author-row-block .img-preview-sm{width:44px;height:44px;flex-shrink:0}
+.dyn-rm{background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 4px}
+.dyn-rm:hover{color:#f44}
+.btn-add-row{background:none;border:1px dashed var(--border2);border-radius:6px;color:var(--text2);font-size:12px;padding:5px 10px;cursor:pointer;width:100%;margin-top:4px}
+.btn-add-row:hover{border-color:var(--accent2);color:var(--accent2)}
+/* 图片上传 */
+.img-upload-wrap{display:flex;align-items:center;gap:10px}
+.img-preview-sm{width:48px;height:48px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0;cursor:pointer;border:1px solid var(--border2)}
+.img-preview-sm img{width:100%;height:100%;object-fit:cover}
+.btn-upload-sm{padding:6px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer}
+.btn-upload-sm:hover{border-color:var(--accent2);color:var(--accent2)}
+/* buttons */
+.btn-save{padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-top:14px}
+.btn-save:hover{background:#e55a85}
+.btn-cancel{padding:8px 18px;background:var(--bg4);color:var(--text2);border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-top:14px;margin-left:6px}
+.modal-close-x{position:sticky;top:0;float:right;margin:-10px -10px 0 0;width:32px;height:32px;border:none;background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;z-index:20}
+.modal-close-x:hover{background:#f44;color:#fff}
+
+/* CATEGORIES */
+.cat-manage{display:flex;flex-direction:column;gap:8px}
+.cat-row{background:var(--bg3);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.cat-key{font-size:11px;color:var(--text2);background:var(--bg4);padding:2px 8px;border-radius:4px;flex-shrink:0}
+.cat-label{font-size:13px;font-weight:500;flex:1}
+.cat-actions{display:flex;gap:6px}
+
+/* AVATARS */
+.av-item{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.av-img{width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px}
+.av-img img{width:100%;height:100%;object-fit:cover}
+.av-actions{display:flex;gap:6px;margin-left:auto}
+.btn-approve{padding:5px 12px;background:rgba(76,175,80,.2);color:#4caf50;border:1px solid rgba(76,175,80,.3);border-radius:6px;font-size:12px;cursor:pointer}
+.btn-approve:hover{background:rgba(76,175,80,.3)}
+.btn-reject{padding:5px 12px;background:rgba(244,67,54,.15);color:#f44336;border:1px solid rgba(244,67,54,.3);border-radius:6px;font-size:12px;cursor:pointer}
+.btn-reject:hover{background:rgba(244,67,54,.25)}
+
+/* CHANGELOG */
+.cl-item{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--accent3);font-size:12px}
+.cl-time{color:var(--text2);margin-bottom:2px}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(10,10,15,0.92);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal-box{background:#1e2030;border:2px solid rgba(173,200,230,0.5);border-radius:16px;width:100%;max-width:680px;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:0 16px 60px rgba(0,0,0,.7)}
+.modal-box h2{font-size:15px;font-weight:700;margin-bottom:16px}
+
+/* LIGHTBOX */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:900;display:none;align-items:center;justify-content:center;cursor:pointer}
+.lightbox.open{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:9999;transform:translateY(100px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+.toast.success{border-color:rgba(76,204,76,.4);color:#4c4}
+.toast.error{border-color:rgba(244,68,68,.4);color:#f44}
+.loading{text-align:center;padding:40px;color:var(--text2);font-size:13px}
+.bili-item{background:var(--bg3);border-radius:10px;padding:12px;display:flex;gap:12px;border:1px solid var(--border)}
+.bili-cover{width:120px;height:72px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--bg4)}
+.bili-cover img{width:100%;height:100%;object-fit:cover}
+.bili-info{flex:1;min-width:0}
+.bili-title{font-size:13px;font-weight:500;margin-bottom:4px;line-height:1.4}
+.bili-meta{font-size:11px;color:var(--text2);margin-bottom:4px}
+.bili-up{display:flex;align-items:center;gap:6px;margin-top:4px}
+.bili-actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn-bili{padding:4px 10px;border-radius:6px;font-size:11px;border:none;cursor:pointer;background:var(--bg4);color:var(--text2);transition:.15s;text-decoration:none;display:inline-block}
+.btn-bili:hover{background:var(--accent2);color:#fff}
+.btn-bili.primary{background:var(--accent);color:#fff}
+.section-sep{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;grid-column:1/-1;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+
+.vi{position:relative}
+
+
+.cat-active{background:var(--accent)!important;color:#fff}
+.cat-active input{accent-color:#fff}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="lbox">
+    <h1>🛡️ GM 后台</h1>
+    <p>沙雕库管理员专用入口</p>
+    <div class="fg"><label>账号</label><input id="gmU" value="gm"></div>
+    <div class="fg"><label>密码</label><input type="password" id="gmP"><div class="lerr" id="gmErr"></div></div>
+    <button class="btn-lg" onclick="gmLogin()">进入后台</button>
+    <div style="margin-top:10px;text-align:center;font-size:12px;color:var(--text2)">默认：gm / gm123456</div>
+  </div>
+</div>
+
+<div id="gmApp">
+  <header class="gm-hd">
+    <div class="gm-logo">沙雕库 GM</div>
+    <div class="gm-nav">
+      <button class="nb active" onclick="sw('dashboard',this)">📊 总览</button>
+      <button class="nb" onclick="sw('messages',this)">💬 消息<span class="ubdot" id="unreadBadge" style="display:none">0</span></button>
+      <button class="nb" onclick="sw('videos',this)">🎬 内容</button>
+      <button class="nb" onclick="sw('categories',this)">🏷️ 分类</button>
+      <button class="nb" onclick="sw('avatars',this)">🖼 头像审核</button>
+      <button class="nb" onclick="sw('changelog',this)">📝 日志</button>
+      <button class="nb" onclick="sw('bili',this)">🔍 B站抓取</button>
+      <button class="nb" onclick="sw('music',this)">🎵 音乐管理</button>
+      <button class="nb" onclick="sw('sync',this)">🔄 数据同步</button>
+    </div>
+    <button class="gm-out" onclick="gmLogout()">退出</button>
+  </header>
+  <div class="body">
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats-grid">
+        <div class="sc"><div class="sn" id="sv">-</div><div class="sl">收录作品</div></div>
+        <div class="sc"><div class="sn" id="sm">-</div><div class="sl">待处理消息</div></div>
+        <div class="sc"><div class="sn" id="scl">-</div><div class="sl">日志总条数</div></div>
+        <div class="sc"><div class="sn" id="sdate" style="font-size:15px">-</div><div class="sl">当前时间</div></div>
+      </div>
+      <div class="g-card"><h3>最近消息</h3><div id="dash-msgs"></div></div>
+      <div class="g-card"><h3>最近日志</h3><div id="dash-cls"></div></div>
+      <div class="g-card">
+        <h3 style="display:flex;align-items:center;gap:10px">📢 公告管理
+          <button class="bsm primary" onclick="addAnnouncement()" style="font-size:12px">＋ 新增公告</button>
+        </h3>
+        <div id="annList"><div class="loading">加载中...</div></div>
+      </div>
+    </div>
+    <!-- MESSAGES -->
+    <div class="panel" id="panel-messages">
+      <div class="g-card" style="padding:0;overflow:hidden">
+        <div class="msg-layout">
+          <div class="topic-list" id="gmTopicList"><div class="loading">加载中...</div></div>
+          <div class="chat-area" id="gmChatArea"><div class="no-topic">← 选择话题开始聊天</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- VIDEOS -->
+    <div class="panel" id="panel-videos">
+      <div class="g-card"><h3>操作</h3><button class="btn-save" onclick="openAdd()">＋ 添加新作品</button></div>
+      <div class="g-card"><h3>作品列表</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="videoSearch" placeholder="🔍 搜索作品名或作者..." oninput="renderVideoList()" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <select id="videoSort" onchange="renderVideoList()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px">
+            <option value="newest">最新添加</option>
+            <option value="oldest">最早添加</option>
+            <option value="plays">播放量</option>
+            <option value="title">标题</option>
+          </select>
+        </div><div id="videoList"></div></div>
+    </div>
+    <!-- CATEGORIES -->
+    <div class="panel" id="panel-categories">
+      <div class="g-card">
+        <h3>分类管理</h3>
+        <div class="fgrid" style="margin-bottom:12px">
+          <div class="fg2"><label>分类 Key（小写字母/数字/下划线）</label><input id="newCatKey" placeholder="xuanhuan"></div>
+          <div class="fg2"><label>显示名称</label><input id="newCatLabel" placeholder="玄幻修仙"></div>
+          <div class="fg2"><label>排序（数字越小越靠前）</label><input id="newCatSort" type="number" placeholder="0" value="0"></div>
+          <div class="fg2" style="display:flex;align-items:flex-end"><button class="btn-save" style="margin:0;width:100%" onclick="addCat()">添加分类</button></div>
+        </div>
+        <div class="cat-manage" id="catManage"></div>
+      </div>
+    </div>
+    <!-- AVATAR REVIEW -->
+    <div class="panel" id="panel-avatars">
+      <div class="g-card"><h3>待审核头像</h3><div id="avatarList"></div></div>
+    </div>
+    <!-- CHANGELOG -->
+    <!-- BILIBILI CRAWLER -->
+    <div class="panel" id="panel-bili">
+      <div class="g-card">
+        <h3>B站搜索抓取（仅显示原创）</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="bili-kw" value="沙雕动画 原创" placeholder="搜索关键词" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <input id="bili-page" type="number" value="1" min="1" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <button class="btn-save" style="margin:0" onclick="biliSearch()">搜索</button>
+        </div>
+        <div id="bili-results" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center" id="bili-pages">
+          <button class="btn-cancel" style="margin:0" onclick="biliPrev()">← 上一页</button>
+          <span id="bili-page-info" style="font-size:13px;color:var(--text2);line-height:32px"></span>
+          <button class="btn-cancel" style="margin:0" onclick="biliNext()">下一页 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MUSIC -->
+    <div class="panel" id="panel-music">
+      <div class="g-card">
+        <h3 id="musicFormTitle">添加音乐</h3>
+        <div class="fgrid">
+          <div class="fg2"><label>曲名 *</label><input id="m-title" placeholder="曲名"></div>
+          <div class="fg2"><label>艺术家</label><input id="m-artist" placeholder="歌手/作者"></div>
+          <div class="fg2 full">
+            <label>音乐文件 * （上传或填URL）</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn-upload-sm" onclick="document.getElementById('musicFileInput').click()">上传音频</button>
+              <input type="file" id="musicFileInput" accept="audio/*" style="display:none" onchange="uploadMusic(this)">
+              <input id="m-url" placeholder="/uploads/bgm.mp3 或 https://..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+            </div>
+          </div>
+          <div class="fg2 full">
+            <label>封面图</label>
+            <div class="img-upload-wrap">
+              <div class="img-preview-sm" id="mCoverPreview" onclick="trigUpload('mCoverFile','mCoverPreview','m-cover')">🎵</div>
+              <input id="m-cover" placeholder="封面URL或点左侧上传" oninput="updateImgPreview('m-cover','mCoverPreview')" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+              <input type="file" id="mCoverFile" accept="image/*" style="display:none" onchange="uploadField(this,'m-cover','mCoverPreview')">
+            </div>
+          </div>
+          <div class="fg2">
+            <label>歌词类型</label>
+            <select id="m-ltype" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;width:100%">
+              <option value="lrc">LRC（带时间戳，自动同步）</option>
+              <option value="plain">纯文本（匀速滚动）</option>
+            </select>
+          </div>
+          <div class="fg2"><label>排序</label><input id="m-sort" type="number" value="0"></div>
+          <div class="fg2 full"><label>音乐出处链接（点击跳转，如B站视频链接）</label><input id="m-source" placeholder="https://www.bilibili.com/video/..."></div>
+          <div class="fg2 full">
+            <label>歌词内容（LRC: [00:05.00]歌词文字）</label>
+            <textarea id="m-lyrics" rows="8" placeholder="[00:00.00]第一行歌词&#10;[00:05.50]第二行歌词" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical;outline:none"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn-save" onclick="saveMusic()">保存</button>
+          <button class="btn-cancel" onclick="clearMusicForm()">清空</button>
+          <span style="font-size:12px;color:#f44;margin-left:8px" id="musicErr"></span>
+          <span style="font-size:12px;color:#4c4;margin-left:8px" id="musicOk"></span>
+        </div>
+      </div>
+      <div class="g-card"><h3>播放列表</h3><div id="musicList"><div class="loading">切换到此面板自动加载</div></div></div>
+    </div>
+
+    <!-- SYNC -->
+    <div class="panel" id="panel-sync">
+      <div class="g-card">
+        <h3>B站数据同步</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+          自动从B站获取：播放量、点赞、收藏、投币、评论、分享、UP主粉丝数、视频集数、最新更新时间。<br>
+          非B站视频（抖音/快手）会自动跳过，数据保持不变。<br>
+          每天凌晨3点自动同步一次。
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn-save" onclick="syncAllQuick()" id="syncQuickBtn">⚡ 快速同步（仅播放量/粉丝）</button>
+          <button class="btn-cancel" onclick="syncZeroPlays()" id="syncZeroBtn" style="margin:0">📊 补全空数据</button>
+          <button class="btn-cancel" onclick="syncAll()" id="syncAllBtn" style="margin:0">🔄 完整同步（含分集数据）</button>
+          <span id="syncStatus" style="font-size:13px;color:var(--text2)"></span>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">
+          快速同步：每集只需2次请求，速度快，适合每日更新 ·
+          完整同步：逐集拉取详细数据，时间长，建议每周一次
+        </div>
+        <div id="syncLastInfo" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+      </div>
+      <div class="g-card" style="display:none" id="syncResultCard">
+        <h3>同步结果</h3>
+        <div id="syncResults"></div>
+      </div>
+      <div class="g-card">
+        <h3>UP主一键导入合集</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">填入B站UP主UID或主页链接，自动获取所有合集并填入表单</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="import-mid" placeholder="UID 或 https://space.bilibili.com/xxxxx" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <button class="btn-save" style="margin:0" onclick="importUpSeasons()">获取合集</button>
+        </div>
+        <div id="importSeasonList"></div>
+      </div>
+      <div class="g-card">
+        <h3>按作者同步</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="syncAuthorSearch" placeholder="🔍 搜索作者名..." oninput="filterSyncAuthorList()" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+        </div>
+        <div id="syncAuthorPaginator" style="display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
+        <div id="syncAuthorList"><div class="loading">切换到此面板自动加载</div></div>
+      </div>
+      <div class="g-card">
+        <h3>单个视频同步</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="syncSearch" placeholder="🔍 搜索作品名..." oninput="renderSyncList()" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <select id="syncSort" onchange="renderSyncList()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px">
+            <option value="newest">最新添加</option>
+            <option value="oldest">最早添加</option>
+            <option value="plays">播放量</option>
+            <option value="title">标题</option>
+            <option value="lastSync">上次同步</option>
+          </select>
+        </div>
+        <div id="syncPagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap"></div>
+        <div id="syncVideoList"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-changelog">
+      <div class="g-card"><h3>全部修改日志</h3><div id="fullCL"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT VIDEO MODAL -->
+<div class="modal-ov" id="editModal">
+  <div class="modal-box">
+    <button class="modal-close-x" onclick="closeEdit()" title="关闭 (ESC)">✕</button>
+    <h2 id="editTitle">添加新作品</h2>
+    <div class="fgrid">
+      <div class="section-sep">基本信息</div>
+      <div class="fg2"><label>作品名称 *</label><input id="f-title" placeholder="万古第一神"></div>
+      <div class="fg2"><label>分类 *（可多选）</label><div id="f-cats" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;min-height:38px"></div></div>
+      <div class="fg2 full">
+        <label>封面图</label>
+        <div class="img-upload-wrap">
+          <div class="img-preview-sm" id="coverPreview" onclick="trigUpload('coverFile','coverPreview','f-cover')">🎬</div>
+          <div style="flex:1">
+            <input id="f-cover" placeholder="封面图URL，或点左侧上传" oninput="updateImgPreview('f-cover','coverPreview')">
+            <input type="file" id="coverFile" accept="image/*" style="display:none" onchange="uploadField(this,'f-cover','coverPreview')">
+          </div>
+        </div>
+      </div>
+      <div class="fg2"><label>封面Emoji（无图时显示）</label><input id="f-emoji" placeholder="⚡"></div>
+      <div class="fg2"><label>状态</label>
+        <select id="f-status">
+          <option value="ongoing">更新中</option>
+          <option value="finished">已完结</option>
+          <option value="hiatus">断更中</option>
+        </select>
+      </div>
+      <div class="fg2 full"><label>简介 *</label><textarea id="f-desc" placeholder="作品介绍..."></textarea></div>
+      <div class="fg2 full"><label>备注（换作者/特殊说明等）</label><textarea id="f-notes" placeholder="可选，如：第二季更换了配音演员..." style="min-height:44px"></textarea></div>
+
+      <div class="section-sep">播放平台（可多个）</div>
+      <div class="fg2 full">
+        <label>平台列表（勾选"搬运"则展开搬运者信息）</label>
+        <div class="dyn-list" id="platformList"></div>
+        <button class="btn-add-row" onclick="addPlatformRow()">＋ 添加平台</button>
+      </div>
+
+      <div class="section-sep">数据</div>
+      <div class="fg2"><label>全网播放量</label><input id="f-plays" type="number" placeholder="8420000"></div>
+      <div class="fg2"><label>总集数</label><input id="f-eps" type="number" placeholder="148"></div>
+      <div class="fg2"><label>发布日期</label><input id="f-pub" type="date"></div>
+      <div class="fg2"><label>上次更新</label><input id="f-upd" type="date"></div>
+
+      <div class="section-sep">季度信息（可选）</div>
+      <div class="fg2 full">
+        <label>季度列表</label>
+        <div class="dyn-list" id="seasonList"></div>
+        <button class="btn-add-row" onclick="addSeasonRow()">＋ 添加季度</button>
+      </div>
+
+      <div class="section-sep">作者列表（可多个）</div>
+      <div class="fg2 full">
+        <div class="dyn-list" id="authorList"></div>
+        <button class="btn-add-row" onclick="addAuthorRow()">＋ 添加作者</button>
+      </div>
+
+      <div class="section-sep">原著信息</div>
+      <div class="fg2"><label>原著名 *</label><input id="f-nname"></div>
+      <div class="fg2"><label>原著链接 *</label><input id="f-nlink" placeholder="https://..."></div>
+      <div class="fg2"><label>原作者名</label><input id="f-nauthor" placeholder="天蚕土豆"></div>
+      <div class="fg2"><label>当前总章节数</label><input id="f-nchapters" type="number" placeholder="1200"></div>
+      <div class="fg2"><label>小说状态</label>
+        <select id="f-nfinished">
+          <option value="0">连载中</option>
+          <option value="1">已完结</option>
+        </select>
+      </div>
+      <div class="fg2"><label>小说上次更新</label><input id="f-nlastupdate" type="date"></div>
+      <div class="section-sep">作者推荐书单</div>
+      <div class="fg2 full">
+        <label>作者推荐的书（书名、链接）</label>
+        <div class="dyn-list" id="recommendList"></div>
+        <button class="btn-add-row" onclick="addRecommendRow()">＋ 添加推荐书</button>
+      </div>
+
+      <div class="section-sep">使用的音乐（可选，保存作品后可继续添加）</div>
+      <div class="fg2 full" id="videoMusicSection" style="display:none">
+        <div id="videoMusicList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+        <button class="btn-add-row" onclick="openAddVideoMusic()">＋ 添加使用的音乐</button>
+      </div>
+      <div class="fg2 full" id="videoMusicTip" style="color:var(--text2);font-size:12px">保存作品后可在此添加使用的音乐</div>
+
+      <div class="section-sep">操作日志</div>
+      <div class="fg2 full"><label>修改原因 *（记入日志）</label><input id="f-reason" placeholder="首次添加 / 更新播放量..."></div>
+    </div>
+    <span style="font-size:12px;color:#f44" id="editErr"></span>
+    <div>
+      <button class="btn-save" onclick="saveVideo()">保存</button>
+      <button class="btn-cancel" onclick="closeEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIDEO MUSIC MODAL -->
+<div class="modal-ov" id="vmusicModal">
+  <div class="modal-box" style="max-width:520px">
+    <h2 id="vmusicTitle">添加使用的音乐</h2>
+    <div class="fgrid">
+      <div class="fg2"><label>歌曲名 *</label><input id="vm-title" placeholder="山野幽居"></div>
+      <div class="fg2"><label>原作者</label><input id="vm-artist" placeholder="奕睆"></div>
+      <div class="fg2 full">
+        <label>封面图</label>
+        <div class="img-upload-wrap">
+          <div class="img-preview-sm" id="vmCoverPreview" onclick="trigUpload('vmCoverFile','vmCoverPreview','vm-cover')">🎵</div>
+          <input id="vm-cover" placeholder="封面URL或点左侧上传" oninput="updateImgPreview('vm-cover','vmCoverPreview')" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none">
+          <input type="file" id="vmCoverFile" accept="image/*" style="display:none" onchange="uploadField(this,'vm-cover','vmCoverPreview')">
+        </div>
+      </div>
+      <div class="fg2 full"><label>原作链接（点击跳转）</label><input id="vm-link" placeholder="https://..."></div>
+      <div class="fg2 full"><label>使用集数（如：第3集、第7集、第12集）</label><input id="vm-eps" placeholder="第3集、第7集"></div>
+      <div class="section-sep" style="margin-top:4px">播放数据（可选）</div>
+      <div class="fg2"><label>播放量</label><input id="vm-plays" type="number" placeholder="0"></div>
+      <div class="fg2"><label>点赞</label><input id="vm-likes" type="number" placeholder="0"></div>
+      <div class="fg2"><label>收藏</label><input id="vm-favs" type="number" placeholder="0"></div>
+      <div class="fg2"><label>投币</label><input id="vm-coins" type="number" placeholder="0"></div>
+      <div class="fg2"><label>评论</label><input id="vm-comments" type="number" placeholder="0"></div>
+      <div class="fg2"><label>转发</label><input id="vm-shares" type="number" placeholder="0"></div>
+      <div class="fg2"><label>排序</label><input id="vm-sort" type="number" value="0"></div>
+    </div>
+    <span style="font-size:12px;color:#f44;margin-left:0;margin-top:8px;display:block" id="vmusicErr"></span>
+    <div style="margin-top:12px">
+      <button class="btn-save" onclick="saveVideoMusic()">保存</button>
+      <button class="btn-cancel" onclick="closeVmusicModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEL MODAL -->
+<div class="modal-ov" id="delModal">
+  <div class="modal-box" style="max-width:380px;text-align:center">
+    <h2 style="margin-bottom:8px">确认移除？</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:14px">移除后不可恢复</p>
+    <div class="fg2" style="margin-bottom:14px;text-align:left"><label>移除原因 *</label><input id="del-reason" placeholder="作品已下架..."></div>
+    <button class="btn-save" onclick="confirmDel()">确认移除</button>
+    <button class="btn-cancel" onclick="closeDel()">取消</button>
+  </div>
+</div>
+
+<div class="lightbox" id="gmLightbox" onclick="this.classList.remove('open')">
+  <img id="gmLightboxImg" src="">
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let gmToken = localStorage.getItem('gm_token');
+let editingId = null, deletingId = null, gmCurrentTopic = null, gmPendingImg = null;
+
+// ─── API ─────────────────────────────────────────────────
+async function api(path, opts={}) {
+  const headers = {'Content-Type':'application/json'};
+  if (gmToken) headers['Authorization'] = 'Bearer '+gmToken;
+  const timeout = opts.timeout || 1800000;
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeout);
+  try {
+    const res = await fetch('/api'+path, {...opts, headers, signal: controller.signal,
+      body: opts.body ? JSON.stringify(opts.body) : undefined});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error||'请求失败');
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+function fmt(n){ n=Number(n)||0; if(n>=10000000) return (n/10000000).toFixed(1)+'千万'; if(n>=10000) return (n/10000).toFixed(1)+'万'; return n; }
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtBadge(n){ if(!n||n<=0) return ''; if(n>9999) return '9999+'; if(n>999) return '999+'; if(n>99) return '99+'; return String(n); }
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ─── WebSocket ───────────────────────────────────────────
+let ws;
+function connectWS() {
+  if (!gmToken) return;
+  const proto = location.protocol==='https:'?'wss':'ws';
+  ws = new WebSocket(`${proto}://${location.host}?token=${gmToken}`);
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type==='new_message'||msg.type==='new_reply') {
+      showToast(`💬 ${msg.from} 发来了新消息`,'info');
+      pollUnread();
+      if (gmCurrentTopic && gmCurrentTopic===msg.topic_id) {
+        gmOpenChat(msg.topic_id);
+      } else if (document.getElementById('panel-messages').classList.contains('active')) {
+        loadMessages();
+      }
+    }
+  };
+  ws.onclose = () => { if (gmToken) setTimeout(connectWS, 5000); };
+}
+
+// ─── LOGIN ───────────────────────────────────────────────
+async function gmLogin() {
+  const u=document.getElementById('gmU').value.trim(), p=document.getElementById('gmP').value;
+  const err=document.getElementById('gmErr');
+  try {
+    const data = await api('/auth/login',{method:'POST',body:{username:u,password:p}});
+    if (data.role!=='gm') { err.textContent='该账号没有GM权限'; return; }
+    gmToken=data.token; localStorage.setItem('gm_token',gmToken);
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('gmApp').style.display='block';
+    initDashboard(); pollUnread(); connectWS(); loadCatsForForm();
+  } catch(e) { err.textContent=e.message; }
+}
+document.getElementById('gmP').addEventListener('keydown',e=>{ if(e.key==='Enter') gmLogin(); });
+function gmLogout() { localStorage.removeItem('gm_token'); location.reload(); }
+if (gmToken) {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('gmApp').style.display='block';
+  initDashboard(); pollUnread(); connectWS(); loadCatsForForm();
+}
+
+// ─── PANELS ──────────────────────────────────────────────
+function sw(name, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='dashboard') initDashboard();
+  if(name==='messages') loadMessages();
+  if(name==='videos') loadVideos();
+  if(name==='categories') loadCats();
+  if(name==='avatars') loadAvatars();
+  if(name==='changelog') loadChangelog();
+  if(name==='music') loadMusicPanel();
+  if(name==='bili') {}
+  if(name==='sync') loadSyncPanel();
+  if(name==='music') loadMusicPanel();
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────
+async function initDashboard() {
+  document.getElementById('sdate').textContent = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  try {
+    const [videos, msgs, cls] = await Promise.all([api('/videos'), api('/messages'), api('/changelog')]);
+    document.getElementById('sv').textContent = videos.length;
+    document.getElementById('sm').textContent = msgs.filter(m=>!m.reply).length;
+    document.getElementById('scl').textContent = cls.length;
+    document.getElementById('dash-msgs').innerHTML = msgs.slice(0,5).map(m=>`
+      <div class="cl-item" style="border-left-color:${m.reply?'#4caf50':'var(--accent)'}">
+        <div class="cl-time">${m.created_at} · ${m.from_user} · ${m.type}</div>
+        <div>${escH(m.content)}</div>
+      </div>`).join('') || '<div style="color:var(--text2);font-size:13px">暂无消息</div>';
+    document.getElementById('dash-cls').innerHTML = cls.slice(0,5).map(c=>`
+      <div class="cl-item">
+        <div class="cl-time">${c.created_at} · [${c.action_type}] ${escH(c.target)}</div>
+        <div>${escH(c.reason)}</div>
+      </div>`).join('') || '<div style="color:var(--text2);font-size:13px">暂无日志</div>';
+  } catch(e) { showToast('加载失败: '+e.message,'error'); }
+}
+
+// ─── MESSAGES ────────────────────────────────────────────
+async function loadMessages() {
+  const tlist = document.getElementById('gmTopicList');
+  tlist.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const topics = await api('/messages');
+    if (!topics.length) { tlist.innerHTML='<div class="loading">暂无消息 🎉</div>'; return; }
+    tlist.innerHTML = topics.map(t=>{
+      const last = t.replies&&t.replies.length ? t.replies[t.replies.length-1] : null;
+      const preview = last ? (last.image_url?'[图片]':last.content) : t.content;
+      const hasUnread = t.unread>0;
+      return `<div class="topic-item ${hasUnread?'has-unread':''} ${gmCurrentTopic===t.id?'active':''}" onclick="gmOpenChat(${t.id})">
+        <div class="ti-top">
+          <span class="ti-from">${escH(t.from_user)}</span>
+          <span class="ti-tag">${escH(t.type)}</span>
+          <span class="ti-time">${t.created_at}</span>
+          ${hasUnread?`<span class="ti-badge">${fmtBadge(t.unread)}</span>`:''}
+        </div>
+        <div class="ti-preview ${hasUnread?'bold':''}">${escH(preview)}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('unreadBadge').style.display='none';
+    if (gmCurrentTopic) gmOpenChat(gmCurrentTopic);
+  } catch(e) { tlist.innerHTML='<div class="loading">加载失败</div>'; }
+}
+
+async function gmOpenChat(id) {
+  gmCurrentTopic = id;
+  if (window._gmChatTimer) clearInterval(window._gmChatTimer);
+  window._gmChatTimer = setInterval(()=>{
+    if (gmCurrentTopic===id) gmOpenChat(id);
+    else clearInterval(window._gmChatTimer);
+  }, 30000);
+  document.querySelectorAll('.topic-item').forEach(el=>el.classList.remove('active'));
+  document.querySelector(`.topic-item[onclick="gmOpenChat(${id})"]`)?.classList.add('active');
+  const area = document.getElementById('gmChatArea');
+  area.innerHTML = '<div class="loading" style="flex:1">加载中...</div>';
+  try {
+    const data = await api('/messages/'+id);
+    const replies = data.replies||[];
+    area.innerHTML = `
+      <div class="chat-area-hd"><b>${escH(data.from_user)}</b> · ${escH(data.type)} · ${data.created_at}</div>
+      <div class="chat-msgs-gm" id="gmMsgs"></div>
+      <div class="chat-input-gm">
+        <div class="img-prev-gm" id="gmImgPrev"><img id="gmImgPrevImg" src=""><button onclick="gmRemoveImg()">✕</button></div>
+        <div class="chat-row-gm">
+          <button class="cibtn" onclick="document.getElementById('gmImgInput').click()" title="发图片">🖼</button>
+          <input type="file" id="gmImgInput" accept="image/*" style="display:none" onchange="gmHandleImg(this)">
+          <textarea id="gmInput" placeholder="Enter发送，Shift+Enter换行" rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gmSend()}"></textarea>
+          <button class="csbtn" id="gmSendBtn" onclick="gmSend()">➤</button>
+        </div>
+      </div>`;
+    const box = document.getElementById('gmMsgs');
+    box.innerHTML = replies.length ? replies.map(r=>{
+      const isGM = r.role==='gm';
+      const displayName = r.nickname||r.sender;
+      const avHtml = r.avatar ? `<img src="${escH(r.avatar)}" alt="">` : displayName[0].toUpperCase();
+      return `<div class="bubble-wrap ${isGM?'me':''}">
+        <div class="bav user-av" style="${!r.avatar?'background:var(--accent2)':''}">${avHtml}</div>
+        <div class="bubble-body">
+          <div class="bubble-time">${r.created_at}</div>
+          ${!isGM?`<div class="bubble-name">${escH(displayName)}</div>`:''}
+          <div class="bubble ${isGM?'gm-b':'user-b'}">
+            ${r.content?`<div>${escH(r.content)}</div>`:''}
+            ${r.image_url?`<img src="${escH(r.image_url)}" onclick="gmLightbox('${escH(r.image_url)}')" loading="lazy">`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('') : '<div style="text-align:center;color:var(--text2);padding:20px;font-size:13px">暂无消息</div>';
+    box.scrollTop = box.scrollHeight;
+    document.querySelector(`.topic-item[onclick="gmOpenChat(${id})"]`)?.classList.remove('has-unread');
+    document.querySelector(`.topic-item[onclick="gmOpenChat(${id})"] .ti-badge`)?.remove();
+  } catch(e) { area.innerHTML='<div class="loading">加载失败</div>'; }
+}
+
+async function gmSend() {
+  if (!gmCurrentTopic) return;
+  const input = document.getElementById('gmInput');
+  const content = input.value.trim(), image_url = gmPendingImg;
+  if (!content&&!image_url) return;
+  const btn = document.getElementById('gmSendBtn'); btn.disabled=true;
+  try {
+    await api('/messages/'+gmCurrentTopic+'/reply',{method:'POST',body:{content,image_url}});
+    input.value=''; gmPendingImg=null; document.getElementById('gmImgPrev').style.display='none';
+    await gmOpenChat(gmCurrentTopic);
+  } catch(e) { showToast(e.message,'error'); }
+  btn.disabled=false;
+}
+async function gmHandleImg(input) {
+  const file=input.files[0]; if(!file) return; input.value='';
+  const fd=new FormData(); fd.append('image',file);
+  showToast('上传中...');
+  try {
+    const res=await fetch('/api/upload/image',{method:'POST',headers:{'Authorization':'Bearer '+gmToken},body:fd});
+    const data=await res.json(); if(!res.ok) throw new Error(data.error||'上传失败');
+    gmPendingImg=data.url; document.getElementById('gmImgPrevImg').src=data.url; document.getElementById('gmImgPrev').style.display='block';
+    showToast('图片已就绪');
+  } catch(e) { showToast(e.message,'error'); }
+}
+function gmRemoveImg(){ gmPendingImg=null; document.getElementById('gmImgPrev').style.display='none'; }
+function gmLightbox(url){ document.getElementById('gmLightboxImg').src=url; document.getElementById('gmLightbox').classList.add('open'); }
+
+async function pollUnread() {
+  try {
+    const data = await api('/messages/unread-count');
+    const badge = document.getElementById('unreadBadge');
+    if (data.count>0) { badge.textContent=fmtBadge(data.count); badge.style.display='inline-block'; }
+    else badge.style.display='none';
+  } catch{}
+  setTimeout(pollUnread, 30000);
+}
+
+// ─── CATEGORIES ──────────────────────────────────────────
+let allCats = [];
+async function loadCats() {
+  allCats = await api('/categories');
+  const el = document.getElementById('catManage');
+  el.innerHTML = allCats.map(c=>`
+    <div class="cat-row">
+      <span class="cat-key">${escH(c.key)}</span>
+      <span class="cat-label">${escH(c.label)}</span>
+      <span style="font-size:12px;color:var(--text2)">排序:${c.sort}</span>
+      <div class="cat-actions">
+        <button class="bsm edit" onclick="editCat(${c.id},'${escH(c.label)}',${c.sort})">编辑</button>
+        <button class="bsm del" onclick="delCat(${c.id})">删除</button>
+      </div>
+    </div>`).join('');
+}
+async function loadCatsForForm() {
+  try {
+    allCats = await api('/categories');
+    const wrap = document.getElementById('f-cats');
+    wrap.innerHTML = allCats.map(c=>`
+      <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border-radius:14px;background:var(--bg4);transition:.15s" onclick="this.classList.toggle('cat-active')">
+        <input type="checkbox" name="catCheck" value="${c.key}" style="cursor:pointer">${escH(c.label)}
+      </label>`).join('');
+  } catch(e){}
+}
+async function addCat() {
+  const key=document.getElementById('newCatKey').value.trim();
+  const label=document.getElementById('newCatLabel').value.trim();
+  const sort=Number(document.getElementById('newCatSort').value)||0;
+  if (!key||!label) { showToast('请填写key和名称','error'); return; }
+  try {
+    await api('/categories',{method:'POST',body:{key,label,sort}});
+    document.getElementById('newCatKey').value=''; document.getElementById('newCatLabel').value='';
+    showToast('分类添加成功'); loadCats(); loadCatsForForm();
+  } catch(e) { showToast(e.message,'error'); }
+}
+async function editCat(id, oldLabel, oldSort) {
+  const label = prompt('新的显示名称:', oldLabel); if (!label) return;
+  const sort = Number(prompt('排序值:', oldSort)||oldSort);
+  try { await api('/categories/'+id,{method:'PUT',body:{label,sort}}); showToast('已更新'); loadCats(); loadCatsForForm(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+async function delCat(id) {
+  if (!confirm('确认删除该分类？')) return;
+  try { await api('/categories/'+id,{method:'DELETE'}); showToast('已删除'); loadCats(); loadCatsForForm(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+// ─── AVATAR REVIEW ────────────────────────────────────────
+async function loadAvatars() {
+  const el = document.getElementById('avatarList');
+  el.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const list = await api('/users/pending-avatars');
+    if (!list.length) { el.innerHTML='<div class="loading">暂无待审核头像 🎉</div>'; return; }
+    el.innerHTML = list.map(item=>`
+      <div class="av-item" id="av-${item.id}">
+        <div class="av-img"><img src="${escH(item.avatar_url)}" alt="" onerror="this.style.display='none'"></div>
+        <div>
+          <div style="font-size:13px;font-weight:500">${escH(item.username)}</div>
+          <div style="font-size:12px;color:var(--text2)">${item.created_at}</div>
+          <div style="margin-top:4px"><a href="${escH(item.avatar_url)}" target="_blank" style="font-size:12px;color:var(--accent2)">查看原图</a></div>
+        </div>
+        <div class="av-actions">
+          <button class="btn-approve" onclick="approveAvatar(${item.id})">✓ 通过</button>
+          <button class="btn-reject" onclick="rejectAvatar(${item.id})">✕ 拒绝</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML='<div class="loading">加载失败</div>'; }
+}
+async function approveAvatar(id) {
+  try { await api('/users/pending-avatars/'+id+'/approve',{method:'POST'}); document.getElementById('av-'+id)?.remove(); showToast('已通过'); }
+  catch(e) { showToast(e.message,'error'); }
+}
+async function rejectAvatar(id) {
+  try { await api('/users/pending-avatars/'+id+'/reject',{method:'POST'}); document.getElementById('av-'+id)?.remove(); showToast('已拒绝'); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+// ─── VIDEOS ──────────────────────────────────────────────
+async function loadVideos() {
+  const list = document.getElementById('videoList');
+  list.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    window._videos = await api('/videos');
+    window._videoPage = 1;
+    renderVideoList();
+  } catch(e) { list.innerHTML='<div class="loading">加载失败</div>'; }
+}
+
+function renderVideoList() {
+  const list = document.getElementById('videoList');
+  const all = window._videos || [];
+  const q = (document.getElementById('videoSearch')?.value || '').trim().toLowerCase();
+  const sort = document.getElementById('videoSort')?.value || 'newest';
+  
+  let videos = q ? all.filter(v => v.title.toLowerCase().includes(q) || (v.author?.name||'').toLowerCase().includes(q)) : all.slice();
+  
+  switch(sort) {
+    case 'newest': videos.sort((a,b) => b.id - a.id); break;
+    case 'oldest': videos.sort((a,b) => a.id - b.id); break;
+    case 'plays': videos.sort((a,b) => (b.plays||0) - (a.plays||0)); break;
+    case 'title': videos.sort((a,b) => a.title.localeCompare(b.title)); break;
+  }
+  
+  // 分页
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(videos.length / pageSize));
+  if (window._videoPage > totalPages) window._videoPage = 1;
+  const page = window._videoPage || 1;
+  const start = (page - 1) * pageSize;
+  const pageVideos = videos.slice(start, start + pageSize);
+  
+  // 找/创建分页容器
+  let pagEl = document.getElementById('videoPagination');
+  if (!pagEl) {
+    pagEl = document.createElement('div');
+    pagEl.id = 'videoPagination';
+    pagEl.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:8px;margin-top:12px';
+    list.parentElement.appendChild(pagEl);
+  }
+  
+  if (!pageVideos.length) {
+    list.innerHTML = '<div class="loading">' + (q ? '没找到符合条件的作品' : '暂无作品，点击上方添加') + '</div>';
+    pagEl.innerHTML = '';
+    return;
+  }
+  
+  list.innerHTML = pageVideos.map(v=>{
+    const coverHtml = v.cover ? `<img src="${escH(v.cover)}" alt="" loading="lazy">` : (v.emoji||'🎬');
+    const statusMap = {ongoing:'更新中',finished:'已完结',hiatus:'断更中'};
+    return `<div class="vi">
+      <div class="vi-em">${coverHtml}</div>
+      <div class="vi-info">
+        <div class="vi-title">${escH(v.title)} <span style="font-size:11px;color:var(--text2)">${statusMap[v.status]||''}</span></div>
+        <div class="vi-meta">${(v.platforms||[]).map(p=>p.name).join('/')||'-'} · ${fmt(v.plays)} 播放 · 共${v.eps}集 · 作者：${escH(v.author.name)}</div>
+        <div class="vi-meta" style="margin-top:2px">原著：${escH(v.novel.name)} · 更新：${v.lastUpdate||'-'}</div>
+      </div>
+      <div class="vi-acts">
+        <button class="bsm edit" onclick="openEdit(${v.id})">编辑</button>
+        <button class="bsm" style="background:var(--bg4);color:var(--accent2);border-color:var(--border2)" onclick="openEpManage(${v.id})">子集管理</button>
+        <button class="bsm del" onclick="openDel(${v.id})">移除</button>
+      </div>
+    </div>`;
+  }).join('');
+  
+  // 分页控件
+  if (totalPages > 1) {
+    let html = `<button class="bsm" ${page<=1?'disabled style="opacity:0.4"':''} onclick="videoGotoPage(${page-1})">← 上一页</button>`;
+    html += `<span style="color:var(--text2);font-size:13px">第 ${page} / ${totalPages} 页（共 ${videos.length} 条）</span>`;
+    html += `<button class="bsm" ${page>=totalPages?'disabled style="opacity:0.4"':''} onclick="videoGotoPage(${page+1})">下一页 →</button>`;
+    pagEl.innerHTML = html;
+  } else {
+    pagEl.innerHTML = `<span style="color:var(--text2);font-size:12px">共 ${videos.length} 条</span>`;
+  }
+}
+
+function videoGotoPage(p) {
+  window._videoPage = p;
+  renderVideoList();
+  document.getElementById('videoList').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─── PLATFORM ROWS ────────────────────────────────────────
+function addPlatformRow(opts={}) {
+  const name = opts.name||'', link = opts.link||'', plays = opts.plays||0;
+  const isRepost = opts.isRepost||false, repostAuthor = opts.repostAuthor||'', repostAuthorLink = opts.repostAuthorLink||'';
+  const uid = 'plat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  const div = document.createElement('div');
+  div.className = 'dyn-row-block';
+  div.innerHTML = `
+    <div class="dyn-row" style="flex-wrap:wrap;gap:6px">
+      <input placeholder="平台名（如B站）" value="${escH(name)}" data-field="plat-name" style="flex:1;min-width:80px">
+      <input placeholder="播放链接" value="${escH(link)}" data-field="plat-link" style="flex:3;min-width:140px">
+      <input placeholder="播放量" type="number" value="${plays}" data-field="plat-plays" style="width:90px;flex:none">
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;flex:none">
+        <input type="checkbox" data-field="plat-repost" ${isRepost?'checked':''} onchange="toggleRepostRow(this)"> 搬运
+      </label>
+      <button class="bsm" title="从B站链接自动获取视频信息填入表单" onclick="fetchBiliInfo(this.closest('.dyn-row-block').querySelector('[data-field=plat-link]'))">🔍 获取</button>
+      <button class="dyn-rm" onclick="this.closest('.dyn-row-block').remove()">✕</button>
+    </div>
+    <div class="dyn-row repost-row" style="display:${isRepost?'flex':'none'};gap:6px;margin-top:4px;padding-left:8px;border-left:2px solid var(--border2)">
+      <input placeholder="搬运者名称" value="${escH(repostAuthor)}" data-field="plat-repost-author" style="flex:1">
+      <input placeholder="搬运者主页链接" value="${escH(repostAuthorLink)}" data-field="plat-repost-link" style="flex:2">
+    </div>`;
+  document.getElementById('platformList').appendChild(div);
+}
+function toggleRepostRow(cb) {
+  const row = cb.closest('.dyn-row-block').querySelector('.repost-row');
+  if (row) row.style.display = cb.checked ? 'flex' : 'none';
+}
+async function fetchBiliInfo(linkInput) {
+  const link = linkInput?.value?.trim();
+  if (!link) { showToast('请先填入播放链接', 'error'); return; }
+  const bvid = link.match(/BV[a-zA-Z0-9]+/)?.[0];
+  if (!bvid) { showToast('链接中找不到 BV 号，请填入 B 站视频链接', 'error'); return; }
+
+  const btn = linkInput.parentElement?.querySelector('.bsm');
+  if (btn) { btn.disabled = true; btn.textContent = '获取中...'; }
+  try {
+    const data = await api('/bilibili/video?bvid=' + bvid);
+    if (!data || data.error) throw new Error(data?.error || '获取失败');
+
+    // 填写标题
+    const titleEl = document.getElementById('f-title');
+    if (titleEl && !titleEl.value.trim()) titleEl.value = data.title || '';
+
+    // 填写封面
+    const coverEl = document.getElementById('f-cover');
+    if (coverEl && !coverEl.value.trim()) {
+      coverEl.value = data.cover || '';
+      updateImgPreview('f-cover', 'coverPreview');
+    }
+
+    // 填写简介
+    const descEl = document.getElementById('f-desc');
+    if (descEl && (!descEl.value.trim() || descEl.value === '待补充')) descEl.value = data.desc || '';
+
+    // 填写集数
+    const epsEl = document.getElementById('f-eps');
+    if (epsEl && !epsEl.value) epsEl.value = data.pages || 1;
+
+    // 填写发布日期
+    const pubEl = document.getElementById('f-pub');
+    if (pubEl && !pubEl.value && data.pubdate) {
+      pubEl.value = new Date(data.pubdate * 1000).toISOString().slice(0, 10);
+    }
+
+    // 填写播放量
+    const playsEl = document.getElementById('f-plays');
+    if (playsEl && !playsEl.value) playsEl.value = data.plays || 0;
+
+    // 填写作者信息（如果是空的，填到第一个作者行）
+    const firstAuthorBlock = document.getElementById('authorList')?.querySelector('.author-row-block');
+    if (firstAuthorBlock) {
+      const anameEl = firstAuthorBlock.querySelector('[data-field="a-name"]');
+      if (anameEl && (!anameEl.value.trim() || anameEl.value === 'B站UP主')) {
+        anameEl.value = data.author || '';
+        const avatarEl = firstAuthorBlock.querySelector('[data-field="a-avatar"]');
+        if (avatarEl) avatarEl.value = (data.author||'')[0]||'';
+        const fansEl = firstAuthorBlock.querySelector('[data-field="a-fans"]');
+        if (fansEl && !fansEl.value) fansEl.value = data.author_fans||0;
+      }
+    }
+
+    // 平台名自动填 B站
+    const nameInput = linkInput.parentElement?.querySelector('[data-field=plat-name]');
+    if (nameInput && !nameInput.value.trim()) nameInput.value = 'B站';
+
+    showToast('✓ 信息已自动填入，请检查并补充其他字段');
+  } catch(e) {
+    showToast('获取失败: ' + e.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🔍 获取'; }
+}
+
+function checkPlatFetch(input) {
+  // 粘贴 BV 链接时自动提示可以获取
+}
+
+function getPlatforms() {
+  return [...document.getElementById('platformList').querySelectorAll('.dyn-row-block')].map(block=>({
+    name: block.querySelector('[data-field="plat-name"]').value.trim(),
+    link: block.querySelector('[data-field="plat-link"]').value.trim(),
+    plays: Number(block.querySelector('[data-field="plat-plays"]').value)||0,
+    isRepost: block.querySelector('[data-field="plat-repost"]').checked,
+    repostAuthor: block.querySelector('[data-field="plat-repost-author"]')?.value.trim()||'',
+    repostAuthorLink: block.querySelector('[data-field="plat-repost-link"]')?.value.trim()||'',
+    syncType: 'manual',
+  })).filter(p=>p.name);
+}
+
+// ─── SEASON ROWS ──────────────────────────────────────────
+function addSeasonRow(name='', eps='', note='') {
+  const div = document.createElement('div'); div.className='dyn-row';
+  div.innerHTML = `<input placeholder="季名（如第一季）" value="${escH(name)}" data-field="s-name" style="flex:1.5">
+    <input placeholder="集数" type="number" value="${eps}" data-field="s-eps" style="width:70px;flex:none">
+    <input placeholder="备注（可选，如换了配音）" value="${escH(note)}" data-field="s-note" style="flex:2">
+    <button class="dyn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('seasonList').appendChild(div);
+}
+function getSeasons() {
+  return [...document.getElementById('seasonList').querySelectorAll('.dyn-row')].map(row=>({
+    name: row.querySelector('[data-field="s-name"]').value.trim(),
+    eps: Number(row.querySelector('[data-field="s-eps"]').value)||0,
+    note: row.querySelector('[data-field="s-note"]').value.trim(),
+  })).filter(s=>s.name);
+}
+
+// ─── AUTHOR LIST ROWS ─────────────────────────────────────
+let _authorRowIdx = 0;
+function addAuthorRow(opts={}) {
+  const idx = ++_authorRowIdx;
+  const name = opts.name||'', role = opts.role||'主创';
+  const avatar = opts.avatar||'', avatarImg = opts.avatarImg||'';
+  const color = opts.color||'#fb7299', fans = opts.fans||0;
+  const platforms = opts.platforms||[];
+  const div = document.createElement('div');
+  div.className = 'author-row-block';
+  div.style.cssText = 'background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px';
+  div.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+      <div class="img-preview-sm" id="aavPreview_${idx}" style="cursor:pointer" onclick="trigUpload('aavFile_${idx}','aavPreview_${idx}','f-aavimg_${idx}')">
+        ${avatarImg ? `<img src="${escH(avatarImg)}" alt="">` : (avatar||'👤')}
+      </div>
+      <input type="file" id="aavFile_${idx}" accept="image/*" style="display:none" onchange="uploadField(this,'f-aavimg_${idx}','aavPreview_${idx}')">
+      <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input placeholder="作者名 *" value="${escH(name)}" data-field="a-name" style="flex:2;min-width:100px">
+          <input placeholder="分工（主创/配音/...）" value="${escH(role)}" data-field="a-role" style="flex:1;min-width:80px">
+          <input placeholder="粉丝数" type="number" value="${fans||''}" data-field="a-fans" style="width:90px;flex:none">
+          <input type="color" value="${color}" data-field="a-color" style="width:40px;flex:none" title="头像背景色">
+        </div>
+        <div style="display:flex;gap:6px">
+          <input id="f-aavimg_${idx}" placeholder="头像图URL，或点左侧上传" value="${escH(avatarImg)}" data-field="a-avatarimg" style="flex:1" oninput="updateAuthorPreview(this,'aavPreview_${idx}','a-avatar_${idx}')">
+          <input id="a-avatar_${idx}" placeholder="头像字" value="${escH(avatar)}" data-field="a-avatar" style="width:60px;flex:none" maxlength="2">
+        </div>
+        <div class="dyn-list" id="aplatList_${idx}" style="margin-top:4px"></div>
+        <button class="btn-add-row" style="font-size:11px;padding:3px 8px" onclick="addAuthorPlatRowTo('aplatList_${idx}')">＋ 添加该作者的平台</button>
+      </div>
+      <button class="dyn-rm" onclick="this.closest('.author-row-block').remove()" style="align-self:flex-start">✕</button>
+    </div>`;
+  // 填充已有平台
+  document.getElementById('authorList').appendChild(div);
+  platforms.forEach(p => addAuthorPlatRowTo(`aplatList_${idx}`, p.platform||p.name||'', p.link||'', p.fans||0));
+}
+function updateAuthorPreview(input, previewId, avatarId) {
+  const url = input.value.trim();
+  const el = document.getElementById(previewId);
+  if (url) {
+    el.innerHTML = `<img src="${escH(url)}" alt="">`;
+  } else {
+    const av = document.getElementById(avatarId)?.value||'👤';
+    el.textContent = av;
+  }
+}
+function addAuthorPlatRowTo(listId, platform='', link='', fans=0) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const div = document.createElement('div'); div.className='dyn-row';
+  div.style.cssText='gap:4px;margin-top:4px';
+  div.innerHTML = `<input placeholder="平台名" value="${escH(platform)}" data-field="ap-plat" style="flex:1;min-width:60px">
+    <input placeholder="主页链接" value="${escH(link)}" data-field="ap-link" style="flex:2;min-width:100px">
+    <input placeholder="粉丝数" type="number" value="${fans||''}" data-field="ap-fans" style="width:80px;flex:none">
+    <button class="dyn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(div);
+}
+function getAuthors() {
+  return [...document.getElementById('authorList').querySelectorAll('.author-row-block')].map(block => {
+    const platRows = [...block.querySelectorAll('.dyn-row')].map(row => ({
+      platform: row.querySelector('[data-field="ap-plat"]')?.value.trim()||'',
+      link: row.querySelector('[data-field="ap-link"]')?.value.trim()||'',
+      fans: Number(row.querySelector('[data-field="ap-fans"]')?.value)||0,
+    })).filter(p=>p.platform);
+    return {
+      name: block.querySelector('[data-field="a-name"]').value.trim(),
+      role: block.querySelector('[data-field="a-role"]').value.trim()||'主创',
+      avatar: block.querySelector('[data-field="a-avatar"]')?.value.trim()||'',
+      avatarImg: block.querySelector('[data-field="a-avatarimg"]')?.value.trim()||'',
+      color: block.querySelector('[data-field="a-color"]')?.value||'#fb7299',
+      fans: Number(block.querySelector('[data-field="a-fans"]')?.value)||0,
+      platforms: platRows,
+    };
+  }).filter(a=>a.name);
+}
+
+// ─── AUTHOR PLATFORM ROWS (旧版，保留兼容) ───────────────
+function addAuthorPlatRow(platform='', link='', fans=0) {
+  const div = document.createElement('div'); div.className='dyn-row';
+  div.innerHTML = `<input placeholder="平台名" value="${escH(platform)}" data-field="ap-plat" style="flex:1">
+    <input placeholder="主页链接" value="${escH(link)}" data-field="ap-link" style="flex:2">
+    <input placeholder="粉丝数" type="number" value="${fans||''}" data-field="ap-fans" style="width:90px;flex:none">
+    <button class="dyn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('authorPlatList').appendChild(div);
+}
+function addRecommendRow(name='', link='') {
+  const div = document.createElement('div'); div.className='dyn-row';
+  div.innerHTML = `<input placeholder="书名" value="${name}" data-field="rec-name" style="flex:1.5">
+    <input placeholder="链接（可选）" value="${link}" data-field="rec-link" style="flex:2">
+    <button class="dyn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('recommendList').appendChild(div);
+}
+function getRecommends() {
+  return [...document.getElementById('recommendList').querySelectorAll('.dyn-row')].map(row=>({
+    name: row.querySelector('[data-field="rec-name"]').value.trim(),
+    link: row.querySelector('[data-field="rec-link"]').value.trim(),
+  })).filter(r=>r.name);
+}
+function getAuthorPlats() {
+  return [...document.getElementById('authorPlatList').querySelectorAll('.dyn-row')].map(row=>({
+    platform: row.querySelector('[data-field="ap-plat"]').value.trim(),
+    link: row.querySelector('[data-field="ap-link"]').value.trim(),
+    fans: Number(row.querySelector('[data-field="ap-fans"]').value)||0,
+  })).filter(p=>p.platform);
+}
+
+// ─── IMAGE UPLOAD ─────────────────────────────────────────
+function trigUpload(fileId, previewId, urlFieldId) { document.getElementById(fileId).click(); }
+function updateImgPreview(urlFieldId, previewId) {
+  const url = document.getElementById(urlFieldId).value.trim();
+  const el = document.getElementById(previewId);
+  el.innerHTML = url ? `<img src="${escH(url)}" alt="">` : (previewId==='aavPreview'?'👤':'🎬');
+}
+async function uploadField(input, urlFieldId, previewId) {
+  const file=input.files[0]; if(!file) return; input.value='';
+  const fd=new FormData(); fd.append('image',file);
+  showToast('上传中...');
+  try {
+    const res=await fetch('/api/upload/image',{method:'POST',headers:{'Authorization':'Bearer '+gmToken},body:fd});
+    const data=await res.json(); if(!res.ok) throw new Error(data.error||'上传失败');
+    document.getElementById(urlFieldId).value=data.url;
+    updateImgPreview(urlFieldId, previewId);
+    showToast('上传成功');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ─── EDIT MODAL ───────────────────────────────────────────
+function openAdd() {
+  editingId=null;
+  document.getElementById('editTitle').textContent='添加新作品';
+  clearForm();
+  document.getElementById('editModal').classList.add('open');
+}
+async function openEdit(id) {
+  editingId=id;
+  document.getElementById('editTitle').textContent='编辑作品';
+  try {
+    const v = await api('/videos/'+id);
+    document.getElementById('f-title').value=v.title;
+    // 勾选已有分类
+    const existingCats = v.cats || (v.cat ? [v.cat] : []);
+    document.querySelectorAll('input[name=catCheck]').forEach(cb => {
+      cb.checked = existingCats.includes(cb.value);
+      if (cb.checked) cb.parentElement.classList.add('cat-active');
+    });
+    document.getElementById('f-cover').value=v.cover||''; updateImgPreview('f-cover','coverPreview');
+    document.getElementById('f-emoji').value=v.emoji||'';
+    document.getElementById('f-status').value=v.status||'ongoing';
+    document.getElementById('f-desc').value=v.desc;
+    document.getElementById('f-notes').value=v.notes||'';
+    document.getElementById('f-plays').value=v.plays;
+    document.getElementById('f-eps').value=v.eps;
+    document.getElementById('f-pub').value=v.pubDate||'';
+    document.getElementById('f-upd').value=v.lastUpdate||'';
+    // 作者信息已由 addAuthorRow 加载（包括 f-aname）
+    document.getElementById('f-nname').value=v.novel.name;
+    document.getElementById('f-nlink').value=v.novel.link;
+    document.getElementById('f-nauthor').value=v.novel.author||'';
+    document.getElementById('f-nchapters').value=v.novel.chapters||0;
+    document.getElementById('f-nfinished').value=v.novel.finished?'1':'0';
+    document.getElementById('f-nlastupdate').value=v.novel.lastUpdate||'';
+    document.getElementById('recommendList').innerHTML='';
+    (v.authorRecommends||[]).forEach(r=>addRecommendRow(r.name,r.link));
+    document.getElementById('f-reason').value='';
+    // 动态列表
+    document.getElementById('platformList').innerHTML='';
+    // 优先用新的 vplatforms，fallback 到旧的 platforms
+    if (v.vplatforms && v.vplatforms.length) {
+      v.vplatforms.forEach(p => addPlatformRow({
+        name: p.name, link: p.link, plays: p.plays,
+        isRepost: p.isRepost, repostAuthor: p.repostAuthor, repostAuthorLink: p.repostAuthorLink
+      }));
+    } else {
+      (v.platforms||[]).forEach(p => addPlatformRow({ name: p.name, link: p.link }));
+    }
+    document.getElementById('seasonList').innerHTML='';
+    (v.seasons||[]).forEach(s=>addSeasonRow(s.name,s.eps,s.note));
+    // 多作者
+    document.getElementById('authorList').innerHTML='';
+    _authorRowIdx = 0;
+    if (v.authors && v.authors.length) {
+      v.authors.forEach(a => addAuthorRow(a));
+    } else {
+      addAuthorRow({ name: v.author.name, role: '主创', avatar: v.author.avatar, avatarImg: v.author.avatarImg, color: v.author.color, fans: v.author.fans, platforms: v.author.platforms||[] });
+    }
+    document.getElementById('editModal').classList.add('open');
+    // 加载该作品使用的音乐
+    currentVmusicVid = id;
+    document.getElementById('videoMusicSection').style.display='block';
+    document.getElementById('videoMusicTip').style.display='none';
+    loadVideoMusicList(id);
+  } catch(e) { console.error('openEdit 错误:', e); showToast('加载失败: '+e.message,'error'); }
+}
+function clearForm() {
+  ['f-title','f-cover','f-emoji','f-desc','f-notes','f-plays','f-eps','f-pub','f-upd','f-nname','f-nlink','f-nauthor','f-nchapters','f-nlastupdate','f-reason'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('f-nfinished').value='0';
+  document.getElementById('recommendList').innerHTML='';
+  document.getElementById('f-status').value='ongoing';
+  // f-acolor 已移入多作者行
+  document.getElementById('coverPreview').innerHTML='🎬';
+  // aavPreview 已移入多作者动态行，无需单独重置
+  document.getElementById('platformList').innerHTML='';
+  document.getElementById('seasonList').innerHTML='';
+  document.getElementById('authorList').innerHTML='';
+  _authorRowIdx = 0;
+  addPlatformRow({ name: 'B站' });
+  addAuthorRow({ role: '主创' });
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+
+// ESC 关闭弹窗
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const editModal = document.getElementById('editModal');
+    if (editModal && editModal.classList.contains('open')) {
+      closeEdit();
+    }
+  }
+});
+
+async function saveVideo() {
+  const g=id=>{ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
+  const err=document.getElementById('editErr');
+  const authors = getAuthors();
+  const vplatforms = getPlatforms();
+  const mainAuthor = authors[0] || {};
+  const body = {
+    title:g('f-title'), cats:Array.from(document.querySelectorAll('input[name=catCheck]:checked')).map(c=>c.value), cat:Array.from(document.querySelectorAll('input[name=catCheck]:checked')).map(c=>c.value)[0]||'', cover:g('f-cover'), emoji:g('f-emoji'),
+    status:g('f-status'), desc:g('f-desc'), notes:g('f-notes'),
+    plays: vplatforms.reduce((s,p)=>s+(p.plays||0),0),
+    eps:Number(g('f-eps'))||0,
+    pubDate:g('f-pub'), lastUpdate:g('f-upd'),
+    // 新格式
+    authors,
+    vplatforms,
+    // 兼容旧格式（取第一个作者/第一个平台）
+    platforms: vplatforms.map(p=>({name:p.name, link:p.link})),
+    authorName: mainAuthor.name||'', authorAvatar: mainAuthor.avatar||'',
+    authorAvatarImg: mainAuthor.avatarImg||'', authorColor: mainAuthor.color||'#fb7299',
+    authorFans: mainAuthor.fans||0, authorPlatforms: mainAuthor.platforms||[],
+    seasons: getSeasons(),
+    novelName:g('f-nname'), novelLink:g('f-nlink'),
+    novelAuthor:g('f-nauthor'), novelChapters:Number(g('f-nchapters'))||0,
+    novelFinished:document.getElementById('f-nfinished').value==='1',
+    novelLastUpdate:g('f-nlastupdate'),
+    authorRecommends:getRecommends(),
+    catLabel:'',
+    reason:g('f-reason')
+  };
+  if (!body.title||!body.desc||!authors.length||!body.novelName||!body.novelLink||!body.reason||!vplatforms.length) {
+    err.textContent='请填写所有必填项（作者、至少一个平台、原著信息、修改原因）'; return;
+  }
+  err.textContent='';
+  try {
+    if (editingId) { await api('/videos/'+editingId,{method:'PUT',body}); showToast('更新成功 ✓'); }
+    else { await api('/videos',{method:'POST',body}); showToast('添加成功 ✓'); }
+    closeEdit(); loadVideos(); initDashboard();
+  } catch(e) { err.textContent=e.message; }
+}
+
+// ─── EPISODE MANAGE ──────────────────────────────────────
+let currentEpManageVid = null;
+let currentEpManageVtitle = '';
+
+window.openEpManage = async function(vid) {
+  currentEpManageVid = vid;
+  document.getElementById('epManageTitle').textContent = '子集管理';
+  document.getElementById('epManageModal').classList.add('open');
+  try {
+    const v = await api('/videos/'+vid);
+    currentEpManageVtitle = v.title;
+    document.getElementById('epManageTitle').textContent = '子集管理 · ' + v.title;
+  } catch(e){}
+  document.getElementById('epManageContent').innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const eps = await api('/videos/'+vid+'/episodes');
+    if (!eps.length) { document.getElementById('epManageContent').innerHTML = '<div class="loading">暂无分集数据，请先同步</div>'; return; }
+    document.getElementById('epManageContent').innerHTML = `
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">共 ${eps.length} 集，点击进入单集管理</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:60vh;overflow-y:auto">
+        ${eps.map(e=>`
+          <div style="background:var(--bg3);border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid var(--border);transition:.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEpDetail(${vid},${e.ep_num},'${escH(e.title)}','${e.bvid}',${e.duration})">
+            <div style="aspect-ratio:16/9;background:var(--bg4);position:relative">
+              ${e.cover?`<img src="${escH(e.cover)}" style="width:100%;height:100%;object-fit:cover">`:''}
+              <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.75);color:#fff;font-size:10px;padding:1px 6px;border-radius:3px">第${e.ep_num}集</span>
+            </div>
+            <div style="padding:6px 8px">
+              <div style="font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escH(e.title)}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    `;
+  } catch(e) { document.getElementById('epManageContent').innerHTML = '<div class="loading">加载失败</div>'; }
+}
+
+function closeEpManage() {
+  document.getElementById('epManageModal').classList.remove('open');
+  currentEpManageVid = null;
+}
+
+async function openEpDetail(vid, epNum, epTitle, bvid, duration) {
+  document.getElementById('epMusicTitle').textContent = '编辑第'+epNum+'集音乐 · '+epTitle;
+  document.getElementById('epMusicContent').innerHTML = '<div class="loading">加载中...</div>';
+  document.getElementById('epMusicModal').classList.add('open');
+  await loadEpMusicList(vid, epNum, bvid, duration);
+}
+
+async function loadEpMusicList(vid, epNum, bvid, duration) {
+  try {
+    const list = await api('/videos/'+vid+'/episodes/'+epNum+'/music');
+    document.getElementById('epMusicContent').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <a href="https://www.bilibili.com/video/${bvid}" target="_blank" style="font-size:12px;color:var(--accent2)">▶ 在B站观看（${fmtDur(duration)}）</a>
+        <button class="bsm edit" onclick="addEpMusicRow(${vid},${epNum},'${bvid}',${duration})">+ 添加音乐</button>
+      </div>
+      <div id="epMusicListBody">
+        ${list.length ? list.map(m => epMusicRowHTML(m, vid, epNum, bvid)).join('') : '<div class="loading">暂无音乐</div>'}
+      </div>
+    `;
+  } catch(e) { document.getElementById('epMusicContent').innerHTML = '<div class="loading">加载失败</div>'; }
+}
+
+function epMusicRowHTML(m, vid, epNum, bvid) {
+  const inputStyle = 'background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px';
+  return `<div class="ep-music-row" data-id="${m.id}" style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:8px">
+    <div style="margin-bottom:8px">
+      <input type="text" class="em-vlink" placeholder="🎬 视频跳转链接（粘贴B站精准秒数链接，自动提取时间）" value="${escH(m.video_link||'')}" oninput="parseEpVideoLink(this)" style="width:100%;${inputStyle}">
+    </div>
+    <div style="display:grid;grid-template-columns:80px 1fr 1fr 60px;gap:8px;margin-bottom:8px">
+      <input type="number" class="em-time" placeholder="秒" value="${m.timestamp||0}" style="${inputStyle}">
+      <input type="text" class="em-title" placeholder="音乐名 *" value="${escH(m.title||'')}" style="${inputStyle}">
+      <input type="text" class="em-artist" placeholder="作者" value="${escH(m.artist||'')}" style="${inputStyle}">
+      <input type="number" class="em-sort" placeholder="排序" value="${m.sort||0}" style="${inputStyle}">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" class="em-link" placeholder="🎵 音乐原创出处链接（网易云/QQ音乐等）" value="${escH(m.source_link||'')}" style="flex:1;${inputStyle}">
+      <button class="bsm edit" style="margin:0" onclick="saveEpMusic(${vid},${epNum},${m.id||'null'},this,'${bvid}')">保存</button>
+      ${m.id ? `<button class="bsm del" style="margin:0" onclick="deleteEpMusic(${vid},${epNum},${m.id},'${bvid}')">删除</button>` : `<button class="bsm" style="margin:0" onclick="this.closest('.ep-music-row').remove()">取消</button>`}
+    </div>
+  </div>`;
+}
+
+function parseEpVideoLink(input) {
+  const val = input.value.trim();
+  if (val.includes('bilibili.com')) {
+    const m = val.match(/[?&]t=(\d+)/);
+    if (m) {
+      const row = input.closest('.ep-music-row');
+      const timeInput = row.querySelector('.em-time');
+      if (timeInput) {
+        timeInput.value = m[1];
+        showToast('已自动提取时间戳: ' + m[1] + ' 秒');
+      }
+    }
+  }
+}
+
+function addEpMusicRow(vid, epNum, bvid, duration) {
+  const body = document.getElementById('epMusicListBody');
+  if (body.querySelector('.loading')) body.innerHTML = '';
+  const div = document.createElement('div');
+  div.innerHTML = epMusicRowHTML({id:null, title:'', artist:'', source_link:'', video_link:'', timestamp:0, sort:0}, vid, epNum, bvid);
+  body.appendChild(div.firstElementChild);
+}
+
+async function saveEpMusic(vid, epNum, id, btn, bvid) {
+  const row = btn.closest('.ep-music-row');
+  const body = {
+    title: row.querySelector('.em-title').value.trim(),
+    artist: row.querySelector('.em-artist').value.trim(),
+    source_link: row.querySelector('.em-link').value.trim(),
+    video_link: row.querySelector('.em-vlink')?.value.trim() || '',
+    timestamp: Number(row.querySelector('.em-time').value.trim()) || 0,
+    sort: Number(row.querySelector('.em-sort').value) || 0
+  };
+  if (!body.title) { showToast('请填写音乐名','error'); return; }
+  try {
+    if (id) {
+      await api('/videos/'+vid+'/episodes/'+epNum+'/music/'+id, {method:'PUT', body});
+    } else {
+      await api('/videos/'+vid+'/episodes/'+epNum+'/music', {method:'POST', body});
+    }
+    showToast('保存成功');
+    // 重新加载
+    const eps = await api('/videos/'+vid+'/episodes');
+    const ep = eps.find(e => e.ep_num === epNum);
+    await loadEpMusicList(vid, epNum, bvid, ep?.duration || 0);
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteEpMusic(vid, epNum, id, bvid) {
+  if (!confirm('删除这条音乐?')) return;
+  try {
+    await api('/videos/'+vid+'/episodes/'+epNum+'/music/'+id, {method:'DELETE'});
+    showToast('已删除');
+    const eps = await api('/videos/'+vid+'/episodes');
+    const ep = eps.find(e => e.ep_num === epNum);
+    await loadEpMusicList(vid, epNum, bvid, ep?.duration || 0);
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+function closeEpMusic() {
+  document.getElementById('epMusicModal').classList.remove('open');
+}
+
+function fmtDur(s) {
+  if (!s) return '0:00';
+  const m=Math.floor(s/60), sec=s%60;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+
+// ─── DELETE ───────────────────────────────────────────────
+function openDel(id){ deletingId=id; document.getElementById('del-reason').value=''; document.getElementById('delModal').classList.add('open'); }
+function closeDel(){ document.getElementById('delModal').classList.remove('open'); deletingId=null; }
+async function confirmDel(){
+  const reason=document.getElementById('del-reason').value.trim();
+  if (!reason) { showToast('请填写移除原因','error'); return; }
+  try {
+    await api('/videos/'+deletingId,{method:'DELETE',body:{reason}});
+    showToast('已移除'); closeDel(); loadVideos(); initDashboard();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ─── CHANGELOG ────────────────────────────────────────────
+async function loadChangelog() {
+  const el=document.getElementById('fullCL');
+  el.innerHTML='<div class="loading">加载中...</div>';
+  try {
+    const cls=await api('/changelog');
+    el.innerHTML=cls.length?cls.map(c=>`<div class="cl-item"><div class="cl-time">${c.created_at} · [${c.action_type}] ${escH(c.target)}</div><div>${escH(c.reason)}</div></div>`).join(''):'<div class="loading">暂无日志</div>';
+  } catch(e){ el.innerHTML='<div class="loading">加载失败</div>'; }
+}
+// ─── VIDEO MUSIC ─────────────────────────────────────────────────
+let editingVmusicId = null;
+let currentVmusicVid = null;
+
+function openAddVideoMusic() {
+  editingVmusicId = null;
+  document.getElementById('vmusicTitle').textContent = '添加使用的音乐';
+  ['vm-title','vm-artist','vm-cover','vm-link','vm-eps','vm-plays','vm-likes','vm-favs','vm-coins','vm-comments','vm-shares'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('vm-sort').value='0';
+  document.getElementById('vmCoverPreview').innerHTML='🎵';
+  document.getElementById('vmusicErr').textContent='';
+  document.getElementById('vmusicModal').classList.add('open');
+}
+
+async function editVideoMusic(id) {
+  try {
+    const list = await api('/videos/'+currentVmusicVid+'/music');
+    const m = list.find(x=>x.id===id);
+    if (!m) return;
+    editingVmusicId = id;
+    document.getElementById('vmusicTitle').textContent = '编辑使用的音乐';
+    document.getElementById('vm-title').value=m.title;
+    document.getElementById('vm-artist').value=m.artist||'';
+    document.getElementById('vm-cover').value=m.cover||''; updateImgPreview('vm-cover','vmCoverPreview');
+    document.getElementById('vm-link').value=m.source_link||'';
+    document.getElementById('vm-eps').value=m.eps_used||'';
+    document.getElementById('vm-plays').value=m.plays||0;
+    document.getElementById('vm-likes').value=m.likes||0;
+    document.getElementById('vm-favs').value=m.favorites||0;
+    document.getElementById('vm-coins').value=m.coins||0;
+    document.getElementById('vm-comments').value=m.comments||0;
+    document.getElementById('vm-shares').value=m.shares||0;
+    document.getElementById('vm-sort').value=m.sort||0;
+    document.getElementById('vmusicErr').textContent='';
+    document.getElementById('vmusicModal').classList.add('open');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+function closeVmusicModal() { document.getElementById('vmusicModal').classList.remove('open'); }
+
+async function saveVideoMusic() {
+  const g = id=>document.getElementById(id).value.trim();
+  const err = document.getElementById('vmusicErr');
+  if (!g('vm-title')) { err.textContent='歌曲名必填'; return; }
+  const body = {
+    title:g('vm-title'), artist:g('vm-artist'), cover:g('vm-cover'),
+    source_link:g('vm-link'), eps_used:g('vm-eps'),
+    plays:Number(g('vm-plays'))||0, likes:Number(g('vm-likes'))||0,
+    favorites:Number(g('vm-favs'))||0, coins:Number(g('vm-coins'))||0,
+    comments:Number(g('vm-comments'))||0, shares:Number(g('vm-shares'))||0,
+    sort:Number(g('vm-sort'))||0
+  };
+  try {
+    if (editingVmusicId) {
+      await api('/videos/'+currentVmusicVid+'/music/'+editingVmusicId,{method:'PUT',body});
+    } else {
+      await api('/videos/'+currentVmusicVid+'/music',{method:'POST',body});
+    }
+    closeVmusicModal();
+    loadVideoMusicList(currentVmusicVid);
+    showToast('保存成功 ✓');
+  } catch(e) { err.textContent=e.message; }
+}
+
+async function deleteVideoMusic(id) {
+  if (!confirm('确认删除？')) return;
+  try {
+    await api('/videos/'+currentVmusicVid+'/music/'+id,{method:'DELETE'});
+    loadVideoMusicList(currentVmusicVid);
+    showToast('已删除');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function loadVideoMusicList(vid) {
+  currentVmusicVid = vid;
+  const listEl = document.getElementById('videoMusicList');
+  if (!listEl) return;
+  try {
+    const list = await api('/videos/'+vid+'/music');
+    if (!list.length) { listEl.innerHTML='<div style="color:var(--text2);font-size:12px">暂无使用的音乐记录</div>'; return; }
+    listEl.innerHTML = list.map(m=>`
+      <div style="background:var(--bg4);border-radius:8px;padding:10px;display:flex;gap:10px;align-items:center">
+        <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">
+          ${m.cover?`<img src="${escH(m.cover)}" style="width:100%;height:100%;object-fit:cover">`:'🎵'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${escH(m.title)}${m.artist?` <span style="font-size:11px;color:var(--text2)">- ${escH(m.artist)}</span>`:''}</div>
+          ${m.eps_used?`<div style="font-size:11px;color:var(--text2)">使用：${escH(m.eps_used)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="bsm edit" onclick="editVideoMusic(${m.id})">编辑</button>
+          <button class="bsm del" onclick="deleteVideoMusic(${m.id})">删除</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { listEl.innerHTML='<div style="color:#f44;font-size:12px">加载失败</div>'; }
+}
+
+// ─── MUSIC ───────────────────────────────────────────────────────
+let editingMusicId = null;
+
+async function loadMusicPanel() {
+  const list = document.getElementById('musicList');
+  list.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const tracks = await api('/music');
+    if (!tracks.length) { list.innerHTML='<div class="loading">暂无音乐，在上方添加</div>'; return; }
+    list.innerHTML = tracks.map(t => `
+      <div class="vi">
+        <div class="vi-em">${t.cover?`<img src="${escH(t.cover)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`:'🎵'}</div>
+        <div class="vi-info">
+          <div class="vi-title">${escH(t.title)}${t.artist?` <span style="font-size:12px;color:var(--text2)">- ${escH(t.artist)}</span>`:''}</div>
+          <div class="vi-meta">排序:${t.sort} · ${t.lyrics_type==='lrc'?'LRC同步':'纯文本'} · ${t.lyrics?t.lyrics.split('\n').length+'行歌词':'无歌词'}</div>
+          <div class="vi-meta" style="word-break:break-all;margin-top:2px">${escH(t.url)}</div>
+        </div>
+        <div class="vi-acts">
+          <button class="bsm edit" onclick="editMusic(${t.id})">编辑</button>
+          <button class="bsm del" onclick="deleteMusic(${t.id})">删除</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { list.innerHTML='<div class="loading">加载失败: '+e.message+'</div>'; }
+}
+
+async function saveMusic() {
+  const g = id => document.getElementById(id).value.trim();
+  const err = document.getElementById('musicErr');
+  const ok = document.getElementById('musicOk');
+  err.textContent=''; ok.textContent='';
+  const title=g('m-title'), url=g('m-url');
+  if (!title||!url) { err.textContent='曲名和音乐URL必填'; return; }
+  const body = {
+    title, artist:g('m-artist'), cover:g('m-cover'), url,
+    lyrics: document.getElementById('m-lyrics').value,
+    lyrics_type: document.getElementById('m-ltype').value,
+    sort: Number(g('m-sort'))||0,
+    source_link: g('m-source')
+  };
+  try {
+    if (editingMusicId) {
+      await api('/music/'+editingMusicId,{method:'PUT',body});
+      showToast('更新成功 ✓');
+    } else {
+      await api('/music',{method:'POST',body});
+      showToast('添加成功 ✓');
+    }
+    ok.textContent='保存成功 ✓';
+    setTimeout(()=>ok.textContent='',2000);
+    clearMusicForm();
+    loadMusicPanel();
+  } catch(e) { err.textContent=e.message; }
+}
+
+async function editMusic(id) {
+  try {
+    const tracks = await api('/music');
+    const t = tracks.find(x=>x.id===id);
+    if (!t) return;
+    editingMusicId=id;
+    document.getElementById('musicFormTitle').textContent='编辑音乐';
+    document.getElementById('m-title').value=t.title;
+    document.getElementById('m-artist').value=t.artist||'';
+    document.getElementById('m-url').value=t.url;
+    document.getElementById('m-cover').value=t.cover||'';
+    updateImgPreview('m-cover','mCoverPreview');
+    document.getElementById('m-ltype').value=t.lyrics_type||'lrc';
+    document.getElementById('m-sort').value=t.sort||0;
+    document.getElementById('m-lyrics').value=t.lyrics||'';
+    document.getElementById('m-source').value=t.source_link||'';
+    window.scrollTo(0,0);
+    showToast('已载入，修改后点保存');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteMusic(id) {
+  if (!confirm('确认删除这首音乐？')) return;
+  try {
+    await api('/music/'+id,{method:'DELETE'});
+    showToast('已删除');
+    loadMusicPanel();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+function clearMusicForm() {
+  editingMusicId=null;
+  document.getElementById('musicFormTitle').textContent='添加音乐';
+  ['m-title','m-artist','m-url','m-cover','m-lyrics','m-source'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-sort').value='0';
+  document.getElementById('m-ltype').value='lrc';
+  document.getElementById('mCoverPreview').innerHTML='🎵';
+  document.getElementById('musicErr').textContent='';
+}
+
+async function uploadMusic(input) {
+  const file=input.files[0]; if(!file) return; input.value='';
+  const fd=new FormData(); fd.append('image',file);
+  showToast('上传音频中...');
+  try {
+    const res=await fetch('/api/upload/audio',{method:'POST',headers:{'Authorization':'Bearer '+gmToken},body:fd});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'上传失败');
+    document.getElementById('m-url').value=data.url;
+    showToast('上传成功: '+data.url);
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ─── BILIBILI CRAWLER ───────────────────────────────────────────
+let biliCurrentPage = 1;
+
+async function biliSearch(page) {
+  biliCurrentPage = page || Number(document.getElementById('bili-page').value) || 1;
+  document.getElementById('bili-page').value = biliCurrentPage;
+  const kw = document.getElementById('bili-kw').value.trim();
+  if (!kw) return;
+  const el = document.getElementById('bili-results');
+  el.innerHTML = '<div class="loading">搜索中...</div>';
+  try {
+    const data = await api('/bilibili/search?keyword='+encodeURIComponent(kw)+'&page='+biliCurrentPage);
+    data.results = data.results.filter(r=>r.copyright===1);
+    if (!data.results.length) { el.innerHTML='<div class="loading">本页没有原创视频，试试下一页</div>'; return; }
+    el.innerHTML = data.results.map(r => `
+      <div class="bili-item">
+        <div class="bili-cover"><img src="${escH(r.cover)}" loading="lazy" onerror="this.style.display='none'"></div>
+        <div class="bili-info">
+          <div class="bili-title">${escH(r.title)}</div>
+          <div style="display:flex;gap:6px;margin-bottom:4px">
+            <span style="background:rgba(76,175,80,.2);color:#4caf50;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">✓ 原创</span>
+            ${r.isUnion?'<span style="background:rgba(35,173,229,.15);color:var(--accent2);font-size:10px;padding:2px 7px;border-radius:4px">联合投稿</span>':''}
+          </div>
+          <div class="bili-meta">▶ ${fmt(r.plays)} · ${r.duration} · ${new Date(r.pubdate*1000).toLocaleDateString('zh-CN')}</div>
+          <div class="bili-up">
+            <span style="font-size:12px;font-weight:500">${escH(r.author)}</span>
+            <a href="${escH(r.authorLink)}" target="_blank" style="font-size:11px;color:var(--accent2);margin-left:4px">主页</a>
+          </div>
+          <div class="bili-actions" style="margin-top:8px">
+            <button class="btn-bili primary" onclick="biliUseVideo('${r.bvid}','${encodeURIComponent(r.title)}','${encodeURIComponent(r.cover)}','${r.mid}','${encodeURIComponent(r.author)}','${escH(r.videoLink)}','${encodeURIComponent(r.desc||'')}',${r.plays})">＋ 填入表单</button>
+            <a href="${escH(r.videoLink)}" target="_blank" class="btn-bili">▶ B站查看</a>
+            <button class="btn-bili" onclick="biliLoadUpVideos('${r.mid}','${encodeURIComponent(r.author)}')">📋 UP主全部视频</button>
+          </div>
+        </div>
+      </div>`).join('');
+    document.getElementById('bili-page-info').textContent = '第'+biliCurrentPage+'页';
+  } catch(e) { el.innerHTML='<div class="loading">搜索失败: '+e.message+'</div>'; }
+}
+
+function biliPrev() { if(biliCurrentPage>1) biliSearch(biliCurrentPage-1); }
+function biliNext() { biliSearch(biliCurrentPage+1); }
+
+async function biliLoadUpVideos(mid, nameEnc) {
+  const name = decodeURIComponent(nameEnc);
+  const el = document.getElementById('bili-results');
+  el.innerHTML = '<div class="loading">加载 '+escH(name)+' 的视频列表...</div>';
+  try {
+    const [space, vids] = await Promise.all([api('/bilibili/space?mid='+mid), api('/bilibili/videos?mid='+mid)]);
+    el.innerHTML = `<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;border:1px solid var(--border)">
+      <img src="${escH(space.avatar)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+      <div><div style="font-size:14px;font-weight:500">${escH(space.name)}</div><div style="font-size:12px;color:var(--text2)">粉丝 ${fmt(space.fans)}</div></div>
+      <button class="btn-bili" style="margin-left:auto" onclick="biliSearch(biliCurrentPage)">← 返回搜索</button>
+    </div>` + vids.list.map(v=>`
+      <div class="bili-item">
+        <div class="bili-cover"><img src="${escH(v.cover)}" loading="lazy"></div>
+        <div class="bili-info">
+          <div class="bili-title">${escH(v.title)}</div>
+          <div class="bili-meta">▶ ${fmt(v.plays)} · ${new Date(v.created*1000).toLocaleDateString('zh-CN')}</div>
+          <div class="bili-actions" style="margin-top:6px">
+            <button class="btn-bili primary" onclick="biliUseVideo('${v.bvid}','${encodeURIComponent(v.title)}','${encodeURIComponent(v.cover)}','${mid}','${encodeURIComponent(space.name)}','${escH(v.link)}','',${v.plays},'${encodeURIComponent(space.avatar||'')}',${space.fans||0})">＋ 填入表单</button>
+            <a href="${escH(v.link)}" target="_blank" class="btn-bili">▶ B站查看</a>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML='<div class="loading">加载失败: '+e.message+'</div>'; }
+}
+
+async function biliUseVideo(bvid,titleEnc,coverEnc,mid,authorEnc,videoLink,descEnc,plays,avatarEnc,fans) {
+  const title=decodeURIComponent(titleEnc), cover=decodeURIComponent(coverEnc);
+  const author=decodeURIComponent(authorEnc), desc=decodeURIComponent(descEnc||'');
+  const avatar=avatarEnc?decodeURIComponent(avatarEnc):'';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-videos').classList.add('active');
+  document.querySelector('.nb[onclick*="videos"]').classList.add('active');
+  await loadVideos();
+  openAdd();
+  setTimeout(()=>{
+    document.getElementById('f-title').value=title;
+    document.getElementById('f-cover').value=cover; updateImgPreview('f-cover','coverPreview');
+    document.getElementById('f-desc').value=desc;
+    document.getElementById('f-plays').value=plays||0;
+    document.getElementById('platformList').innerHTML=''; addPlatformRow({name:'B站', link:videoLink});
+    // 更新多作者第一行的名字
+    const _fb1 = document.getElementById('authorList')?.querySelector('.author-row-block');
+    if (_fb1) {
+      const _nameEl = _fb1.querySelector('[data-field="a-name"]');
+      if (_nameEl) _nameEl.value = author||'B站UP主';
+    }
+    const fb3 = document.getElementById('authorList')?.querySelector('.author-row-block');
+    if (fb3) {
+      const avEl3 = fb3.querySelector('[data-field="a-avatar"]');
+      if (avEl3) avEl3.value = author[0]||'';
+      if (avatar) {
+        const avImgEl3 = fb3.querySelector('[data-field="a-avatarimg"]');
+        if (avImgEl3) avImgEl3.value = avatar;
+        const previewEl3 = fb3.querySelector('.img-preview-sm');
+        if (previewEl3) previewEl3.innerHTML = '<img src="' + escH(avatar) + '" alt="">';
+      }
+      if (fans) {
+        const fansEl3 = fb3.querySelector('[data-field="a-fans"]');
+        if (fansEl3) fansEl3.value = fans;
+      }
+    }
+    document.getElementById('authorPlatList').innerHTML=''; addAuthorPlatRow('B站','https://space.bilibili.com/'+mid,fans||0);
+    showToast('数据已填入，请补充原著信息后保存');
+  },300);
+}
+
+// ─── BILI STYLES ─────────────────────────────────────────────────
+
+// ─── IMPORT SEASONS ──────────────────────────────────────────────
+async function importUpSeasons() {
+  const val = document.getElementById('import-mid').value.trim();
+  if (!val) return;
+  let mid = val;
+  const m = val.match(/space\.bilibili\.com\/(\d+)/);
+  if (m) mid = m[1];
+  if (!/^\d+$/.test(mid)) { showToast('请输入有效的UID或主页链接','error'); return; }
+  const listEl = document.getElementById('importSeasonList');
+  listEl.innerHTML = '<div class="loading">获取中...</div>';
+  try {
+    const data = await api('/bilibili/seasons?mid='+mid);
+    if (!data.seasons.length) { listEl.innerHTML='<div class="loading">未找到合集</div>'; return; }
+    // 把数据存到window供批量导入用
+    window._importData = data;
+    window._importMid = mid;
+    listEl.innerHTML = `
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+        <img src="${escH(data.author.avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500">${escH(data.author.name)}</div>
+          <div style="font-size:12px;color:var(--text2)">粉丝 ${fmt(data.author.fans)} · 共${data.seasons.length}个合集</div>
+        </div>
+        <button class="bsm" onclick="toggleAllSeasons()" id="seasonSelectAll">全选</button>
+        <button class="bsm edit" onclick="batchImportSeasons()">批量导入选中</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${data.seasons.map((s,i)=>`
+        <label style="background:var(--bg3);border-radius:8px;padding:10px;display:flex;gap:10px;align-items:center;cursor:pointer">
+          <input type="checkbox" class="season-check" data-idx="${i}" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+          <div style="width:64px;height:40px;border-radius:4px;overflow:hidden;background:var(--bg4);flex-shrink:0">
+            ${s.cover?`<img src="${escH(s.cover)}" style="width:100%;height:100%;object-fit:cover">`:''}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500">${escH(s.name)}</div>
+            <div style="font-size:11px;color:var(--text2)">${s.total}集</div>
+          </div>
+          <button class="bsm edit" onclick="event.preventDefault();importOneSeasonOriginal('${mid}','${encodeURIComponent(s.name)}','${encodeURIComponent(s.cover||'')}',${s.total},'${encodeURIComponent(data.author.name)}','${encodeURIComponent(data.author.avatar)}',${data.author.fans},${s.id})">立即导入</button>
+        </label>`).join('')}
+      </div>`;
+  } catch(e) { listEl.innerHTML='<div class="loading">获取失败: '+e.message+'</div>'; }
+}
+
+function toggleAllSeasons() {
+  const boxes = document.querySelectorAll('.season-check');
+  const allChecked = Array.from(boxes).every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+  document.getElementById('seasonSelectAll').textContent = allChecked ? '全选' : '取消全选';
+}
+
+async function importOneSeasonQuick(idx) {
+  const data = window._importData;
+  const mid = window._importMid;
+  if (!data || !data.seasons[idx]) return;
+  const s = data.seasons[idx];
+  
+  // 拿合集第一个视频的BV
+  let firstBvid = '';
+  try {
+    const r = await fetch('/api/bilibili/season-videos?mid='+mid+'&season_id='+s.id, { headers: { Authorization: 'Bearer '+token } });
+    const d = await r.json();
+    if (d.bvids && d.bvids.length) firstBvid = d.bvids[0];
+  } catch(e){}
+  
+  const biliLink = firstBvid ? 'https://www.bilibili.com/video/'+firstBvid : 'https://space.bilibili.com/'+mid;
+  
+  // 直接POST到后端
+  try {
+    await api('/videos', {method:'POST', body: {
+      title: s.name,
+      cat: '',
+      cats: [],
+      cover: s.cover || '',
+      emoji: '🎬',
+      desc: '待补充',
+      status: 'ongoing',
+      platforms: [{name:'B站', link: biliLink}],
+      plays: 0, eps: s.total || 0,
+      pubDate: '', lastUpdate: '',
+      seasons: [], notes: '',
+      authorName: data.author.name,
+      authorAvatar: data.author.name[0] || '',
+      authorAvatarImg: data.author.avatar || '',
+      authorColor: '#fb7299',
+      authorFans: data.author.fans || 0,
+      authorPlatforms: [{platform:'B站', link:'https://space.bilibili.com/'+mid, fans: data.author.fans||0}],
+      novelName: '待补充',
+      novelLink: 'https://www.bilibili.com/video/'+firstBvid,
+      novelAuthor: '', novelChapters: 0,
+      novelFinished: false, novelLastUpdate: '',
+      authorRecommends: [],
+      catLabel: '',
+      reason: '一键导入B站合集'
+    }});
+    showToast('「'+s.name+'」已入库');
+    return true;
+  } catch(e) {
+    showToast('导入失败: ' + e.message, 'error'); console.error('导入错误:', e);
+    return false;
+  }
+}
+
+async function batchImportSeasons() {
+  const checked = Array.from(document.querySelectorAll('.season-check:checked'));
+  if (!checked.length) { showToast('请勾选要导入的合集','error'); return; }
+  if (!confirm(`确认导入 ${checked.length} 个合集？`)) return;
+  
+  let ok = 0, fail = 0;
+  for (const cb of checked) {
+    const idx = Number(cb.dataset.idx);
+    const result = await importOneSeasonQuick(idx);
+    if (result) ok++; else fail++;
+  }
+  showToast(`完成: 成功${ok}个，失败${fail}个`);
+  loadVideos();
+}
+
+async function importOneSeasonOriginal(mid, nameEnc, coverEnc, eps, authorEnc, avatarEnc, fans, seasonId) {
+  const name=decodeURIComponent(nameEnc), cover=decodeURIComponent(coverEnc);
+  const author=decodeURIComponent(authorEnc), avatar=decodeURIComponent(avatarEnc);
+  // 拿这个合集的第一个视频bvid
+  let firstBvid = '';
+  let fetchError = '';
+  try {
+    showToast('获取合集第一个视频...', 'info');
+    const r = await fetch('/api/bilibili/season-videos?mid='+mid+'&season_id='+seasonId, { headers: { Authorization: 'Bearer '+token } });
+    const d = await r.json();
+    if (d.bvids && d.bvids.length) {
+      firstBvid = d.bvids[0];
+    } else {
+      fetchError = d.error || 'API 返回空数据，可能被 B 站风控（-352）';
+    }
+  } catch(e){ fetchError = e.message || '网络错误'; }
+
+  if (!firstBvid) {
+    const proceed = confirm('⚠️ 无法获取「' + name + '」的第一集 BV 号\n\n原因：' + fetchError + '\n\n如果继续，会用作者主页链接占位，导入后需要手动编辑改成视频 BV 链接才能正常同步数据。\n\n建议：取消，过几分钟再试（风控通常是临时的）。\n\n是否继续导入？');
+    if (!proceed) { showToast('已取消导入'); return; }
+  }
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-videos').classList.add('active');
+  document.querySelector('.nb[onclick*="videos"]').classList.add('active');
+  await loadVideos();
+  openAdd();
+  setTimeout(()=>{
+    document.getElementById('f-title').value=name;
+    document.getElementById('f-cover').value=cover; updateImgPreview('f-cover','coverPreview');
+    document.getElementById('f-eps').value=eps;
+    document.getElementById('platformList').innerHTML=''; const biliLink = firstBvid ? 'https://www.bilibili.com/video/'+firstBvid : 'https://space.bilibili.com/'+mid;
+    addPlatformRow({name:'B站', link:biliLink});
+    const _fb2 = document.getElementById('authorList')?.querySelector('.author-row-block');
+    if (_fb2) {
+      const _nameEl2 = _fb2.querySelector('[data-field="a-name"]');
+      if (_nameEl2) _nameEl2.value = author||'B站UP主';
+    }
+    // 更新多作者列表中第一个作者的信息
+    const firstBlock = document.getElementById('authorList')?.querySelector('.author-row-block');
+    if (firstBlock) {
+      const avEl = firstBlock.querySelector('[data-field="a-avatar"]');
+      if (avEl) avEl.value = author[0]||'';
+      if (avatar) {
+        const avImgEl = firstBlock.querySelector('[data-field="a-avatarimg"]');
+        if (avImgEl) { avImgEl.value = avatar; }
+        const previewEl = firstBlock.querySelector('.img-preview-sm');
+        if (previewEl) previewEl.innerHTML = '<img src="' + escH(avatar) + '" alt="">';
+      }
+      const fansEl = firstBlock.querySelector('[data-field="a-fans"]');
+      if (fansEl) fansEl.value = fans||0;
+    }
+    document.getElementById('authorPlatList').innerHTML=''; addAuthorPlatRow('B站','https://space.bilibili.com/'+mid,fans);
+    
+    // 自动填默认值（必填项）
+    document.getElementById('f-desc').value='待补充';
+    document.getElementById('f-nname').value='待补充';
+    document.getElementById('f-nlink').value=biliLink;
+    document.getElementById('f-reason').value='B站合集导入';
+    
+    showToast('「'+name+'」已填入默认值，可直接保存或修改后保存');
+  },300);
+}
+
+// ─── SYNC ─────────────────────────────────────────────────────────
+async function loadSyncPanel() {
+  // 加载作者列表
+  try {
+    const videos = await api('/videos');
+    // 按作者名去重，提取mid
+    const authorMap = {};
+    videos.forEach(v => {
+      if (!authorMap[v.author.name]) {
+        const bili = (v.platforms||[]).find(p=>p.link&&p.link.includes('bilibili'));
+        const mid = bili?.link?.match(/space\.bilibili\.com\/(\d+)/)?.[1] ||
+                    bili?.link?.match(/bilibili\.com\/video\/BV/)?.[0] ? null : null;
+        authorMap[v.author.name] = {
+          name: v.author.name,
+          avatar: v.author.avatarImg || '',
+          fans: v.author.fans,
+          color: v.author.color,
+          count: 0,
+          videos: [],
+          lastSync: v.lastSyncAt || null
+        };
+      }
+      authorMap[v.author.name].count++;
+      authorMap[v.author.name].videos.push(v.id);
+      if (v.lastSyncAt && (!authorMap[v.author.name].lastSync || v.lastSyncAt > authorMap[v.author.name].lastSync)) {
+        authorMap[v.author.name].lastSync = v.lastSyncAt;
+      }
+    });
+
+    const authors = Object.values(authorMap);
+    window._syncAuthors = authors;
+    window._syncAuthorPage = 1;
+    renderSyncAuthorList(1);
+  } catch(e) {}
+  try {
+    const s = await api('/sync/status');
+    const el = document.getElementById('syncLastInfo');
+    el.textContent = s.last_sync ? '上次同步：'+s.last_sync+' · '+(s.last_result||'') : '尚未进行过同步';
+  } catch(e) {}
+  try {
+    window._syncVideos = await api('/videos');
+    window._syncPage = 1;
+    renderSyncList();
+    // 恢复正在进行的同步任务
+    setTimeout(() => { restoreActiveSyncs(); startGlobalSyncPolling(); }, 500);
+  } catch(e) { document.getElementById('syncVideoList').innerHTML='<div class="loading">加载失败</div>'; }
+}
+
+function renderSyncList() {
+  const listEl = document.getElementById('syncVideoList');
+  const pagEl = document.getElementById('syncPagination');
+  const all = window._syncVideos || [];
+  const q = (document.getElementById('syncSearch')?.value || '').trim().toLowerCase();
+  const sort = document.getElementById('syncSort')?.value || 'newest';
+  
+  // 过滤
+  let videos = q ? all.filter(v => v.title.toLowerCase().includes(q) || (v.author?.name||'').toLowerCase().includes(q)) : all.slice();
+  
+  // 排序
+  switch(sort) {
+    case 'newest': videos.sort((a,b) => b.id - a.id); break;
+    case 'oldest': videos.sort((a,b) => a.id - b.id); break;
+    case 'plays': videos.sort((a,b) => (b.plays||0) - (a.plays||0)); break;
+    case 'title': videos.sort((a,b) => a.title.localeCompare(b.title)); break;
+    case 'lastSync': videos.sort((a,b) => (b.lastSyncAt||'').localeCompare(a.lastSyncAt||'')); break;
+  }
+  
+  // 分页
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(videos.length / pageSize));
+  if (window._syncPage > totalPages) window._syncPage = 1;
+  const page = window._syncPage || 1;
+  const start = (page - 1) * pageSize;
+  const pageVideos = videos.slice(start, start + pageSize);
+  
+  if (!pageVideos.length) {
+    listEl.innerHTML = '<div class="loading">' + (q ? '没找到符合条件的作品' : '暂无作品') + '</div>';
+    pagEl.innerHTML = '';
+    return;
+  }
+  
+  listEl.innerHTML = pageVideos.map(v => {
+    const plats = v.platforms||[];
+    const isBili = plats.some(p=>p.link&&p.link.includes('bilibili'));
+    const lastSync = v.lastSyncAt ? `<span style="color:var(--text2)">上次: ${v.lastSyncAt}</span>` : '<span style="color:var(--text2)">从未同步</span>';
+    const lastResult = v.lastSyncResult ? `<span style="color:#4caf50;margin-left:6px">${escH(v.lastSyncResult)}</span>` : '';
+    return `<div class="vi" style="opacity:${isBili?1:0.5}">
+      <div class="vi-em">${v.cover?`<img src="${escH(v.cover)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" loading="lazy">`:(v.emoji||'🎬')}</div>
+      <div class="vi-info">
+        <div class="vi-title">${escH(v.title)}</div>
+        <div class="vi-meta">${plats.map(p=>p.name).join('/')||'-'} · ${isBili?'<span style="color:#4caf50">可同步</span>':'<span style="color:var(--text2)">非B站跳过</span>'}</div>
+        <div class="vi-meta" style="margin-top:2px">${lastSync}${lastResult}</div>
+        <div class="vi-meta" style="margin-top:2px;color:#4caf50" id="sync-result-${v.id}"></div>
+      </div>
+      <div class="vi-acts">
+        ${isBili?`<button class="bsm edit" id="sync-btn-${v.id}" onclick="syncOne(${v.id},'${escH(v.title)}')">同步</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  
+  // 分页控件
+  if (totalPages > 1) {
+    let html = `<button class="bsm" ${page<=1?'disabled style="opacity:0.4"':''} onclick="syncGotoPage(${page-1})">← 上一页</button>`;
+    html += `<span style="color:var(--text2);font-size:13px">第 ${page} / ${totalPages} 页（共 ${videos.length} 条）</span>`;
+    html += `<button class="bsm" ${page>=totalPages?'disabled style="opacity:0.4"':''} onclick="syncGotoPage(${page+1})">下一页 →</button>`;
+    pagEl.innerHTML = html;
+  } else {
+    pagEl.innerHTML = `<span style="color:var(--text2);font-size:12px">共 ${videos.length} 条</span>`;
+  }
+}
+
+function syncGotoPage(p) {
+  window._syncPage = p;
+  renderSyncList();
+}
+
+function filterSyncAuthorList() {
+  const q = (document.getElementById('syncAuthorSearch')?.value || '').trim().toLowerCase();
+  const all = window._syncAuthors || [];
+  window._syncAuthorsFiltered = q ? all.filter(a => a.name.toLowerCase().includes(q)) : null;
+  renderSyncAuthorList(1);
+}
+
+function renderSyncAuthorList(page) {
+  const authors = window._syncAuthorsFiltered || window._syncAuthors || [];
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(authors.length / PAGE_SIZE));
+  page = Math.max(1, Math.min(page, totalPages));
+  window._syncAuthorPage = page;
+
+  const slice = authors.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  const listEl = document.getElementById('syncAuthorList');
+  if (!listEl) return;
+
+  listEl.innerHTML = slice.map(a => `
+    <div class="vi">
+      <div class="vi-em" style="background:${a.color||'var(--accent)'}">
+        ${a.avatar?`<img src="${escH(a.avatar)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`:a.name[0]}
+      </div>
+      <div class="vi-info">
+        <div class="vi-title">${escH(a.name)}</div>
+        <div class="vi-meta">共${a.count}部作品 · 粉丝 ${fmt(a.fans)}</div>
+        <div class="vi-meta" style="margin-top:2px;color:var(--text2)">${a.lastSync?'上次: '+a.lastSync:'从未同步'}</div>
+        <div class="vi-meta" style="margin-top:2px;color:#4caf50" id="sync-author-result-${encodeURIComponent(a.name)}"></div>
+      </div>
+      <div class="vi-acts">
+        <button class="bsm edit" id="sync-author-btn-${encodeURIComponent(a.name)}"
+          onclick="syncAuthor('${encodeURIComponent(a.name)}',${JSON.stringify(a.videos)})">同步</button>
+      </div>
+    </div>`).join('');
+
+  // 渲染分页器
+  const pg = document.getElementById('syncAuthorPaginator');
+  if (!pg) return;
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  const WINDOW = 5;
+  let start = Math.max(1, page-2);
+  let end = Math.min(totalPages, start+WINDOW-1);
+  if (end-start < WINDOW-1) start = Math.max(1, end-WINDOW+1);
+
+  let btns = '';
+  btns += `<button class="bsm" ${page<=1?'disabled style="opacity:0.4"':''} onclick="renderSyncAuthorList(${page-1})">← 上一页</button>`;
+  btns += `<span style="color:var(--text2);font-size:13px">第 ${page} / ${totalPages} 页（共 ${authors.length} 条）</span>`;
+  btns += `<button class="bsm" ${page>=totalPages?'disabled style="opacity:0.4"':''} onclick="renderSyncAuthorList(${page+1})">下一页 →</button>`;
+  pg.innerHTML = btns;
+}
+
+async function syncAuthor(nameEnc, videoIds) {
+  const name = decodeURIComponent(nameEnc);
+  const btn = document.getElementById('sync-author-btn-'+nameEnc);
+  const result = document.getElementById('sync-author-result-'+nameEnc);
+  if (!btn || !result) return;
+  if (!Array.isArray(videoIds) || videoIds.length === 0) {
+    showToast('该作者没有可同步的视频', 'error');
+    return;
+  }
+  btn.disabled = true; btn.textContent = '启动中...';
+  result.textContent = '⏳ 正在创建任务...';
+  try {
+    const data = await api('/sync/author-async', { method: 'POST', body: { videoIds } });
+    if (data.error) throw new Error(data.error);
+    result.style.color = '#4caf50';
+    result.textContent = '✓ ' + data.total + ' 个任务已加入队列，后台运行中';
+    showToast(name + ' 同步任务已创建（' + data.total + ' 个）');
+    btn.disabled = false; btn.textContent = '同步';
+    startGlobalSyncPolling();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '同步';
+    result.style.color = '#f44';
+    result.textContent = '失败: ' + e.message;
+    showToast(e.message, 'error');
+  }
+}
+
+async function syncAllQuick() {
+  const btn = document.getElementById('syncQuickBtn');
+  const status = document.getElementById('syncStatus');
+  const card = document.getElementById('syncResultCard');
+  const results = document.getElementById('syncResults');
+  if (!confirm('确定开始快速同步全部视频吗？\n(只更新播放量/粉丝，不获取分集，约 5-10 分钟)')) return;
+  btn.disabled = true; btn.textContent = '启动中...';
+  status.textContent = '正在创建任务...';
+  card.style.display = 'block';
+  results.innerHTML = '';
+  try {
+    const data = await api('/sync/quick/all-async', { method: 'POST' });
+    if (data.error) throw new Error(data.error);
+    showToast('已创建 ' + data.total + ' 个快速同步任务');
+    status.textContent = '✓ ' + data.total + ' 个任务已加入队列';
+    btn.disabled = false; btn.textContent = '⚡ 快速同步（仅播放量/粉丝）';
+    startGlobalSyncPolling();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '⚡ 快速同步（仅播放量/粉丝）';
+    status.textContent = '失败: ' + e.message;
+    showToast(e.message, 'error');
+  }
+}
+
+async function syncZeroPlays() {
+  const btn = document.getElementById('syncZeroBtn');
+  const status = document.getElementById('syncStatus');
+  const card = document.getElementById('syncResultCard');
+  if (!confirm('确定完整同步所有播放量为 0 的视频吗？\n（含分集数据，时间较长）')) return;
+  btn.disabled = true; btn.textContent = '启动中...';
+  status.textContent = '正在创建任务...';
+  card.style.display = 'block';
+  try {
+    const data = await api('/sync/zero-plays-async', { method: 'POST' });
+    if (data.error) throw new Error(data.error);
+    if (data.total === 0) {
+      status.textContent = '✓ ' + data.message;
+      showToast(data.message);
+    } else {
+      showToast('已创建 ' + data.total + ' 个同步任务');
+      status.textContent = '✓ ' + data.total + ' 个零播放视频已加入队列';
+      startGlobalSyncPolling();
+    }
+    btn.disabled = false; btn.textContent = '📊 补全空数据';
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '📊 补全空数据';
+    status.textContent = '失败: ' + e.message;
+    showToast(e.message, 'error');
+  }
+}
+
+async function syncAll() {
+  const btn = document.getElementById('syncAllBtn');
+  const status = document.getElementById('syncStatus');
+  const card = document.getElementById('syncResultCard');
+  const results = document.getElementById('syncResults');
+  if (!confirm('确定开始全部完整同步吗？\n约 1-2 小时（后台运行，刷新页面不丢失进度）')) return;
+  btn.disabled = true; btn.textContent = '启动中...';
+  status.textContent = '正在创建任务...';
+  card.style.display = 'block';
+  results.innerHTML = '';
+  try {
+    const data = await api('/sync/all-async', { method: 'POST' });
+    if (data.error) throw new Error(data.error);
+    showToast('已创建 ' + data.total + ' 个同步任务，后台运行中');
+    status.textContent = '✓ ' + data.total + ' 个任务已加入队列，后台串行处理（可关闭页面）';
+    btn.disabled = false; btn.textContent = '🔄 完整同步（含分集数据）';
+    startGlobalSyncPolling();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🔄 完整同步（含分集数据）';
+    status.textContent = '失败: ' + e.message;
+    showToast(e.message, 'error');
+  }
+}
+
+let _globalPollerTimer = null;
+async function startGlobalSyncPolling() {
+  if (_globalPollerTimer) return;
+  const status = document.getElementById('syncStatus');
+  const tick = async () => {
+    try {
+      const all = await api('/sync/jobs');
+      const pending = all.filter(j => j.status === 'pending').length;
+      const running = all.filter(j => j.status === 'running').length;
+      const done = all.filter(j => j.status === 'done').length;
+      const failed = all.filter(j => j.status === 'failed').length;
+      const total = pending + running + done + failed;
+      if (pending + running === 0) {
+        clearInterval(_globalPollerTimer);
+        _globalPollerTimer = null;
+        if (total > 0 && status) {
+          status.textContent = '✓ 全部完成：' + done + ' 成功，' + failed + ' 失败';
+        }
+        if (typeof loadSyncPanel === 'function') loadSyncPanel();
+        return;
+      }
+      if (status) {
+        const cur = all.find(j => j.status === 'running');
+        const epInfo = cur && cur.total_eps ? ' (' + cur.done_eps + '/' + cur.total_eps + ')' : '';
+        status.textContent = '⏳ 进度 ' + (done+failed) + '/' + total + ' · 进行中: ' + (cur?cur.title:'-') + epInfo + ' · 队列: ' + pending;
+      }
+      // 同时为每个 running 的视频更新单独 UI
+      for (const j of all.filter(jj => jj.status === 'running')) {
+        const btn = document.getElementById('sync-btn-' + j.video_id);
+        if (btn && !btn.disabled === false) continue;
+        if (btn && typeof pollSyncJob === 'function' && !window._syncPollers?.[j.id]) {
+          pollSyncJob(j.id, j.video_id, j.title);
+        }
+      }
+    } catch(e) { console.error('全局轮询失败:', e); }
+  };
+  tick();
+  _globalPollerTimer = setInterval(tick, 5000);
+}
+
+async function syncOne(id, title) {
+  const btn = document.getElementById('sync-btn-'+id);
+  const result = document.getElementById('sync-result-'+id);
+  if (!btn || !result) return;
+
+  btn.disabled = true; btn.textContent = '启动中...';
+  result.textContent = '⏳ 正在启动同步...';
+
+  try {
+    const data = await api('/sync/video/'+id, { method: 'POST' });
+    if (!data.ok && !data.jobId) {
+      throw new Error(data.error || '启动失败');
+    }
+    if (data.error && data.jobId) {
+      // 已经在同步中，直接跟踪现有任务
+      showToast(data.error, 'error');
+    }
+    pollSyncJob(data.jobId, id, title);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '同步';
+    result.style.color = '#f44';
+    result.textContent = '启动失败: ' + e.message;
+    showToast(e.message, 'error');
+  }
+}
+
+// 轮询同步任务进度
+async function pollSyncJob(jobId, videoId, title) {
+  const btn = document.getElementById('sync-btn-'+videoId);
+  const result = document.getElementById('sync-result-'+videoId);
+  if (!btn || !result) return;
+
+  // 加进度条
+  const card = btn.closest('.vi');
+  if (card && !card.querySelector('.sync-progress')) {
+    card.style.position = 'relative';
+    card.style.overflow = 'hidden';
+    const bar = document.createElement('div');
+    bar.className = 'sync-progress';
+    bar.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:0%;background:rgba(251,114,153,0.18);z-index:0;pointer-events:none;transition:width 0.5s linear';
+    card.insertBefore(bar, card.firstChild);
+  }
+
+  btn.disabled = true; btn.textContent = '同步中...';
+
+  // 清除旧的轮询
+  if (window._syncPollers && window._syncPollers[jobId]) {
+    clearInterval(window._syncPollers[jobId]);
+  }
+  if (!window._syncPollers) window._syncPollers = {};
+
+  const startTime = Date.now();
+
+  const poll = async () => {
+    try {
+      const job = await api('/sync/jobs/'+jobId);
+      const elapsedSec = (Date.now() - startTime) / 1000;
+
+      if (job.status === 'running') {
+        const total = job.total_eps || 0;
+        const done = job.done_eps || 0;
+        const pct = total > 0 ? (done / total * 100) : 0;
+        // 进度条
+        if (card) {
+          const bar = card.querySelector('.sync-progress');
+          if (bar) bar.style.width = Math.min(95, pct) + '%';
+        }
+        // 文字
+        let etaText = '';
+        if (done > 0 && total > 0) {
+          const avg = elapsedSec / done;
+          const remaining = Math.round(avg * (total - done));
+          const m = Math.floor(remaining/60), sec = remaining%60;
+          etaText = m > 0 ? m+'分'+sec+'秒' : sec+'秒';
+        }
+        const epTitle = job.current_ep_title ? '「'+job.current_ep_title+'」' : '';
+        result.style.color = 'var(--text2)';
+        result.textContent = total > 0
+          ? '⏳ ('+done+'/'+total+') '+epTitle+(etaText?' · 还需 '+etaText:'')
+          : '⏳ 准备中...';
+      } else if (job.status === 'done') {
+        // 完成
+        clearInterval(window._syncPollers[jobId]);
+        delete window._syncPollers[jobId];
+        const totalSec = Math.round((Date.now() - startTime) / 1000);
+        const tm = Math.floor(totalSec/60), ts = totalSec%60;
+        const timeStr = tm > 0 ? tm+'分'+ts+'秒' : ts+'秒';
+        try {
+          const r = JSON.parse(job.result_json || '{}');
+          const u = r.updates || {};
+          result.style.color = '#4caf50';
+          result.innerHTML = '✓ 同步完成（用时'+timeStr+'）播放:'+fmt(u.plays||0)+' 粉丝:'+fmt(u.author_fans||0)+(u.eps?' 集数:'+u.eps:'');
+        } catch(e) {
+          result.style.color = '#4caf50';
+          result.textContent = '✓ 同步完成（用时'+timeStr+'）';
+        }
+        if (card) {
+          const bar = card.querySelector('.sync-progress');
+          if (bar) { bar.style.width = '100%'; setTimeout(() => bar.remove(), 600); }
+        }
+        btn.disabled = false; btn.textContent = '同步';
+        showToast(title + ' 同步成功');
+      } else if (job.status === 'failed' || job.status === 'cancelled') {
+        // 失败
+        clearInterval(window._syncPollers[jobId]);
+        delete window._syncPollers[jobId];
+        result.style.color = '#f44';
+        result.textContent = (job.status === 'cancelled' ? '已取消' : '失败') + (job.error_msg ? ': '+job.error_msg : '');
+        if (card) {
+          const bar = card.querySelector('.sync-progress');
+          if (bar) bar.remove();
+        }
+        btn.disabled = false; btn.textContent = '同步';
+      }
+    } catch(e) {
+      // 网络错误或任务不存在，停止轮询
+      clearInterval(window._syncPollers[jobId]);
+      delete window._syncPollers[jobId];
+      result.style.color = '#f44';
+      result.textContent = '查询任务失败: ' + e.message;
+      btn.disabled = false; btn.textContent = '同步';
+    }
+  };
+
+  poll(); // 立即查一次
+  window._syncPollers[jobId] = setInterval(poll, 3000); // 每 3 秒查一次
+}
+
+// 页面加载时恢复正在同步的任务 UI
+async function restoreActiveSyncs() {
+  try {
+    const jobs = await api('/sync/jobs/active');
+    for (const job of jobs) {
+      if (job.video_id && job.title) {
+        // 等 syncVideoList 加载完成
+        await new Promise(r => setTimeout(r, 200));
+        const btn = document.getElementById('sync-btn-'+job.video_id);
+        if (btn) {
+          pollSyncJob(job.id, job.video_id, job.title);
+        }
+      }
+    }
+    if (jobs.length > 0) {
+      showToast('已恢复 '+jobs.length+' 个进行中的同步任务');
+    }
+  } catch(e) { console.error('恢复同步任务失败:', e); }
+}
+
+
+// ─── 公告管理 ───────────────────────────
+async function loadAnnouncements() {
+  const el = document.getElementById('annList');
+  if (!el) return;
+  try {
+    const list = await api('/announcements/all');
+    if (!list.length) { el.innerHTML = '<div style="color:var(--text2);padding:12px;font-size:13px">暂无公告，点击上方"＋ 新增公告"添加</div>'; return; }
+    el.innerHTML = list.map(a => `
+      <div class="vi" data-ann-id="${a.id}">
+        <div class="vi-info" style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <input type="checkbox" ${a.enabled?'checked':''} onchange="toggleAnnEnabled(${a.id}, this.checked)" title="${a.enabled?'已启用':'已禁用'}">
+            <input type="number" value="${a.sort_order||0}" data-ann-sort="${a.id}" onchange="updateAnnSort(${a.id}, this.value)" style="width:60px;padding:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px" title="排序（小的在前）">
+            <span style="font-size:11px;color:var(--text2)">${a.enabled?'✅ 启用':'⏸️ 禁用'}</span>
+          </div>
+          <div style="display:flex;gap:6px">
+            <input value="${escH(a.content)}" data-ann-content="${a.id}" placeholder="公告内容" style="flex:2;padding:6px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px">
+            <input value="${escH(a.link||'')}" data-ann-link="${a.id}" placeholder="链接（可选）" style="flex:1;padding:6px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px">
+          </div>
+        </div>
+        <div class="vi-acts" style="flex-direction:column;gap:4px">
+          <button class="bsm primary" onclick="saveAnn(${a.id})">保存</button>
+          <button class="bsm danger" onclick="deleteAnn(${a.id})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="loading">加载失败: ' + e.message + '</div>'; }
+}
+
+async function addAnnouncement() {
+  try {
+    await api('/announcements', { method: 'POST', body: { content: '新公告（请编辑）', link: '', enabled: true, sort_order: 99 } });
+    showToast('已添加，请编辑');
+    loadAnnouncements();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function saveAnn(id) {
+  const content = document.querySelector(`[data-ann-content="${id}"]`)?.value.trim();
+  const link = document.querySelector(`[data-ann-link="${id}"]`)?.value.trim();
+  const sort = Number(document.querySelector(`[data-ann-sort="${id}"]`)?.value)||0;
+  if (!content) { showToast('内容必填', 'error'); return; }
+  try {
+    await api('/announcements/' + id, { method: 'PUT', body: { content, link, enabled: true, sort_order: sort } });
+    showToast('已保存 ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function toggleAnnEnabled(id, enabled) {
+  const content = document.querySelector(`[data-ann-content="${id}"]`)?.value.trim();
+  const link = document.querySelector(`[data-ann-link="${id}"]`)?.value.trim();
+  const sort = Number(document.querySelector(`[data-ann-sort="${id}"]`)?.value)||0;
+  try {
+    await api('/announcements/' + id, { method: 'PUT', body: { content, link, enabled, sort_order: sort } });
+    showToast(enabled?'已启用':'已禁用');
+    loadAnnouncements();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function updateAnnSort(id, sort) {
+  const content = document.querySelector(`[data-ann-content="${id}"]`)?.value.trim();
+  const link = document.querySelector(`[data-ann-link="${id}"]`)?.value.trim();
+  try {
+    await api('/announcements/' + id, { method: 'PUT', body: { content, link, enabled: true, sort_order: Number(sort)||0 } });
+    showToast('排序已更新');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteAnn(id) {
+  if (!confirm('确定删除这条公告吗？')) return;
+  try {
+    await api('/announcements/' + id, { method: 'DELETE' });
+    showToast('已删除');
+    loadAnnouncements();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// 初始化时加载公告
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.gmToken) loadAnnouncements();
+});
+// 切到仪表盘 tab 时也刷新
+const _origInitDashboard = typeof initDashboard === 'function' ? initDashboard : null;
+if (_origInitDashboard) {
+  window.initDashboard = function() {
+    _origInitDashboard.apply(this, arguments);
+    loadAnnouncements();
+  };
+}
+
+</script>
+
+</div>
+</div>
+
+
+<!-- EPISODE MANAGE MODAL -->
+<div class="modal-ov" id="epManageModal">
+  <div class="modal-box" style="max-width:900px">
+    <h2 style="display:flex;align-items:center;gap:10px"><button onclick="closeEpManage()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;padding:5px 12px;border-radius:6px;font-weight:400">← 返回</button><span id="epManageTitle" style="flex:1">子集管理</span><button onclick="closeEpManage()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer">✕</button></h2>
+    <div id="epManageContent"></div>
+  </div>
+</div>
+
+<!-- EPISODE MUSIC EDIT MODAL -->
+<div class="modal-ov" id="epMusicModal" style="z-index:600">
+  <div class="modal-box" style="max-width:680px">
+    <h2 style="display:flex;align-items:center;gap:10px"><button onclick="closeEpMusic()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;padding:5px 12px;border-radius:6px;font-weight:400">← 返回</button><span id="epMusicTitle" style="flex:1">编辑分集音乐</span><button onclick="closeEpMusic()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer">✕</button></h2>
+    <div id="epMusicContent"></div>
+  </div>
+</div>
+
+</body>
+</html>

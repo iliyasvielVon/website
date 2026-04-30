@@ -1,0 +1,24 @@
+server {
+    listen 80;
+    server_name your-domain.com;  # 改成你的域名或服务器IP
+
+    # 静态文件直接由 nginx 提供（可选优化）
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+# 如果你有 SSL 证书（推荐用 certbot 自动申请）:
+# sudo apt install certbot python3-certbot-nginx
+# sudo certbot --nginx -d your-domain.com

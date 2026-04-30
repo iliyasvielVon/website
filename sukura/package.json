@@ -1,0 +1,21 @@
+{
+  "name": "sukura",
+  "version": "1.0.0",
+  "description": "沙雕库 - 全网沙雕动画聚合站",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.3",
+    "busboy": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "ws": "^8.17.0"
+  }
+}
